@@ -4,6 +4,7 @@ chemical_inc = 0.30
 chemical_eva = 0.80
 chemical_dif = 0.05
 
+
 class Map(object):
     def __init__(self, grids):
         self.grids = grids
@@ -12,19 +13,24 @@ class Map(object):
 
         self.cell_visited = np.zeros_like(grids, dtype=int)
         self.cell_chemical = np.zeros_like(grids, dtype=float)
-        self.cell_obstacle = np.array(grids == '.', dtype=int)
+        self.cell_obstacle = np.array(grids != '.', dtype=int)
 
         self.free_grids = []
         for r in range(self.region_height):
             for c in range(self.region_width):
-                if self.cell_obstacle[r][c]:
+                if not self.cell_obstacle[r][c]:
                     self.free_grids.append((r, c))
 
     def random_free_position(self):
         idx = np.random.randint(0, len(self.free_grids))
         return self.free_grids[idx]
 
-    def is_obstacle(self, r, c):
+    def passable(self, r, c):
+        if 0 <= r < self.region_height and 0 <= c < self.region_width and not self.obstacle(r, c):
+            return True
+        return False
+
+    def obstacle(self, r, c):
         return self.cell_obstacle[r][c]
 
     def chemical(self, r, c):
