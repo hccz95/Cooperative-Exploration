@@ -12,8 +12,12 @@ class Map(object):
         self.region_height, self.region_width = grids.shape
 
         self.cell_visited = np.zeros_like(grids, dtype=int)
+        self.cell_visable = np.zeros_like(grids, dtype=int)
         self.cell_chemical = np.zeros_like(grids, dtype=float)
         self.cell_obstacle = np.array(grids != '.', dtype=int)
+        self.cell_closed = np.zeros_like(grids, dtype=int)
+
+        self.step_cnt = 0
 
         self.free_grids = []
         for r in range(self.region_height):
@@ -25,8 +29,11 @@ class Map(object):
         idx = np.random.randint(0, len(self.free_grids))
         return self.free_grids[idx]
 
+    def is_closed(self, r, c):
+        return not self.in_range(r, c) or self.obstacle(r, c) or (self.cell_closed[r][c] > 0)
+
     def passable(self, r, c):
-        if 0 <= r < self.region_height and 0 <= c < self.region_width and not self.obstacle(r, c):
+        if self.in_range(r, c) and not self.obstacle(r, c) and 0 == self.cell_closed[r][c]:
             return True
         return False
 
@@ -39,9 +46,12 @@ class Map(object):
     def get_color(self, r, c):
         if not self.cell_visited[r][c]:
             return (127, 127, 127)
-        if self.cell_obstacle:
+        if self.cell_obstacle[r][c]:
             return (0, 0, 0)
         return (255, 255, 255)
+
+    def in_range(self, r, c):
+        return 0 <= r < self.region_height and 0 <= c < self.region_width
 
 
 if __name__ == "__main__":
