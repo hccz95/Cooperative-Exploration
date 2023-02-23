@@ -17,3 +17,11 @@ def load_grids(map_file):
                 grids[r].append(row[c])
     grids = np.array(grids)
     return grids
+
+
+def distance_euclid(pos0, pos1):
+    return ((pos0[0] - pos1[0]) ** 2 + (pos0[1] - pos1[1]) ** 2) ** 0.5
+
+
+def distance_manhattan(pos0, pos1):
+    return abs(pos0[0] - pos1[0]) + abs(pos0[1] - pos1[1])

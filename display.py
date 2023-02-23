@@ -25,7 +25,7 @@ class Maze(tk.Tk, object):
         self.UNIT = min((H_max - header_height) // self.region_height, (W_max - legend_width) // self.region_width)
 
         # header模块
-        self.f_header = tk.Frame(self, height=header_height, width=self.region_width * self.UNIT, highlightthickness=0, bg="#FFFFFF")
+        self.f_header = tk.Frame(self, height=header_height, width=self.region_width * self.UNIT, highlightthickness=0, bg="#CDC0B0")
         self.f_header.place(x=gap, y=self.region_height * self.UNIT + gap * 2, anchor="nw")
 
         self.geometry('{0}x{1}'.format(self.region_width * self.UNIT + legend_width + gap * 3,
@@ -35,12 +35,16 @@ class Maze(tk.Tk, object):
         self.canvas = tk.Canvas(self, height=self.region_height * self.UNIT, width=self.region_width * self.UNIT, bg='white')
         self.canvas.place(x=gap, y=gap, anchor='nw')
 
+        # 按钮容器
+        self.indicate = tk.Frame(self, height=(self.region_height * self.UNIT + header_height) // 2, width=legend_width, bg='#CDC0B0')
+        self.indicate.place(x=gap * 2 + self.region_width * self.UNIT, y=gap, anchor='nw')
+
         # 图例模块
         img_open = Image.new('RGB', (256, 256), (255, 255, 255))
         self.img_png = ImageTk.PhotoImage(img_open)
-        self.legend = tk.Label(self, image=self.img_png, height=self.region_height * self.UNIT + header_height + gap,
+        self.legend = tk.Label(self, image=self.img_png, height=(self.region_height * self.UNIT + header_height) // 2,
                                                          width=legend_width, bg='white')
-        self.legend.place(x=gap * 2 + self.region_width * self.UNIT, y=gap, anchor='nw')
+        self.legend.place(x=gap * 2 + self.region_width * self.UNIT, y=gap + (self.region_height * self.UNIT + header_height) // 2 + gap, anchor='nw')
 
     def draw_reset(self, predators=[], preys=[]):
         self.canvas.delete("all")
@@ -65,7 +69,15 @@ class Maze(tk.Tk, object):
         for predator in predators:
             r, c = predator.position
             x, y = c * self.UNIT, r * self.UNIT
-            self.canvas.create_oval(x, y, x + self.UNIT, y + self.UNIT, fill='red', width=0)
+
+            delta = int(self.UNIT * 0.25)
+            if predator.stuck:
+                self.canvas.create_oval(x - delta, y - delta, x + self.UNIT + delta, y + self.UNIT + delta, width=2)
+
+            if predator.chosen or len(predator.planned_path) > 0:
+                self.canvas.create_oval(x , y, x + self.UNIT, y + self.UNIT, fill='blue', width=0)
+            else:
+                self.canvas.create_oval(x, y, x + self.UNIT, y + self.UNIT, fill='red', width=0)
 
         for prey in preys:
             if prey.found:

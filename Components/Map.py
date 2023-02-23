@@ -11,19 +11,47 @@ class Map(object):
         self.region_size = grids.shape
         self.region_height, self.region_width = grids.shape
 
-        self.cell_visited = np.zeros_like(grids, dtype=int)
-        self.cell_visable = np.zeros_like(grids, dtype=int)
+        self.cell_visited = np.zeros_like(grids, dtype=bool)
+        self.cell_visable = np.zeros_like(grids, dtype=bool)
         self.cell_chemical = np.zeros_like(grids, dtype=float)
-        self.cell_obstacle = np.array(grids != '.', dtype=int)
+        self.cell_obstacle = np.array(grids != '.', dtype=bool)
         self.cell_closed = np.zeros_like(grids, dtype=int)
 
         self.step_cnt = 0
 
         self.free_grids = []
+        self.process_grids(grids)
+
+    def process_grids(self, grids):
+        mark = np.zeros_like(grids, dtype=bool)
+        from collections import deque
+        max_block = deque()
         for r in range(self.region_height):
             for c in range(self.region_width):
-                if not self.cell_obstacle[r][c]:
-                    self.free_grids.append((r, c))
+                if mark[r][c]:
+                    continue
+                block = deque()
+                q = deque()
+                mark[r][c] = True
+                q.append((r, c))
+                while len(q) > 0:
+                    r_, c_ = q.pop()
+                    block.append((r_, c_))
+                    if self.in_range(r_+1, c_) and not mark[r_+1][c_] and grids[r_+1][c] == '.':
+                        mark[r_+1][c_] = True
+                        q.append((r_+1, c_))
+                    if self.in_range(r_-1, c_) and not mark[r_-1][c_] and grids[r_-1][c_] == '.':
+                        mark[r_-1][c_] = True
+                        q.append((r_-1, c_))
+                    if self.in_range(r_, c_+1) and not mark[r_][c_+1] and grids[r_][c_+1] == '.':
+                        mark[r_][c_+1] = True
+                        q.append((r_, c_+1))
+                    if self.in_range(r_, c_-1) and not mark[r_][c_-1] and grids[r_][c_-1] == '.':
+                        mark[r_][c_-1] = True
+                        q.append((r_, c_-1))
+                if len(max_block) < len(block):
+                    max_block = block
+        self.free_grids = max_block
 
     def random_free_position(self):
         idx = np.random.randint(0, len(self.free_grids))
@@ -52,6 +80,36 @@ class Map(object):
 
     def in_range(self, r, c):
         return 0 <= r < self.region_height and 0 <= c < self.region_width
+
+    def evaporate(self):
+        for r in range(self.region_height):
+            for c in range(self.region_width):
+                self.cell_chemical[r][c] *= chemical_eva
+
+    def passable_neighbors(self, r, c):
+        neighbors = []
+        if self.passable(r, c-1):
+            neighbors.append((r, c-1))
+        if self.passable(r, c+1):
+            neighbors.append((r, c+1))
+        if self.passable(r-1, c):
+            neighbors.append((r-1, c))
+        if self.passable(r+1, c):
+            neighbors.append((r+1, c))
+        return neighbors
+
+    def xy2rc(self, pixel):
+        x, y = pixel
+        r, c = y // self.UNIT, x // self.UNIT
+        return r, c
+
+    def rc2xy(self, position, mode='center'):
+        r, c = position
+        x, y = c * self.UNIT, r * self.UNIT
+        if mode == 'center':
+            x += 0.5 * self.UNIT
+            y += 0.5 * self.UNIT
+        return x, y
 
 
 if __name__ == "__main__":
