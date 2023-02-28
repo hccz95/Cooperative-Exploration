@@ -3,48 +3,51 @@
 import tkinter as tk
 from PIL import Image, ImageTk
 
-H_max = 1000
-W_max = 1600
+H_max = 800
+W_max = 1200
 size = 1
 step_size = 1
-gap = 10
-header_height = 150
-legend_width = 240
+gap = 5
+H_1 = 40 + gap * 2
+H_2 = 200
 
 
 class Maze(tk.Tk, object):
-    def __init__(self, maps):
+    def __init__(self, ):
         super(Maze, self).__init__()
 
-        self.maps = maps
-
-        self.configure(bg="#CDC0B0")                # 整体的背景色
+        self.configure(bg="#CDC0B0")                # 整体的背景色CDC0B0
         self.resizable(width=False, height=False)   # 窗口是否可以设置大小
 
-        self.region_height, self.region_width = maps.region_height, maps.region_width
-        self.UNIT = min((H_max - header_height) // self.region_height, (W_max - legend_width) // self.region_width)
-
-        # header模块
-        self.f_header = tk.Frame(self, height=header_height, width=self.region_width * self.UNIT, highlightthickness=0, bg="#CDC0B0")
-        self.f_header.place(x=gap, y=self.region_height * self.UNIT + gap * 2, anchor="nw")
-
-        self.geometry('{0}x{1}'.format(self.region_width * self.UNIT + legend_width + gap * 3,
-                                       self.region_height * self.UNIT + header_height + gap * 3))
+        self.geometry('{0}x{1}'.format(W_max, H_max))
 
         # 画布模块
-        self.canvas = tk.Canvas(self, height=self.region_height * self.UNIT, width=self.region_width * self.UNIT, bg='white')
-        self.canvas.place(x=gap, y=gap, anchor='nw')
+        canvas_h, canvas_w = H_max - gap * 2, H_max - gap * 2
+        self.canvas = tk.Canvas(self, height=canvas_h, width=canvas_w, bg='white')
+        self.canvas.place(x=gap, y=H_max//2, anchor='w')
 
         # 按钮容器
-        self.indicate = tk.Frame(self, height=(self.region_height * self.UNIT + header_height) // 2, width=legend_width, bg='#CDC0B0')
-        self.indicate.place(x=gap * 2 + self.region_width * self.UNIT, y=gap, anchor='nw')
+        W_2 = W_max - canvas_w - gap * 3
+        X_2 = gap * 2 + canvas_w
+        self.indicate = tk.Frame(self, height=H_1, width=W_2, bg='#CDC0B0')
+        self.indicate.place(x=X_2, y=gap, anchor='nw')
+
+        # header模块
+        self.f_header = tk.Frame(self, height=H_2, width=W_2, highlightthickness=0, bg="#CDC0B0")
+        self.f_header.place(x=X_2, y=gap + H_1 + gap, anchor="nw")
 
         # 图例模块
-        img_open = Image.new('RGB', (256, 256), (255, 255, 255))
+        img_open = Image.open('Legend.png')
         self.img_png = ImageTk.PhotoImage(img_open)
-        self.legend = tk.Label(self, image=self.img_png, height=(self.region_height * self.UNIT + header_height) // 2,
-                                                         width=legend_width, bg='white')
-        self.legend.place(x=gap * 2 + self.region_width * self.UNIT, y=gap + (self.region_height * self.UNIT + header_height) // 2 + gap, anchor='nw')
+        self.legend = tk.Label(self, image=self.img_png, height=H_max - H_1 - H_2 - gap * 4,
+                                                         width=W_2, bg='#CDC0B0')
+        self.legend.place(x=X_2, y=gap + H_1 + gap + H_2 + gap, anchor='nw')
+
+    def load_maps(self, maps):
+        self.maps = maps
+
+        self.region_height, self.region_width = maps.region_height, maps.region_width
+        self.UNIT = min((H_max - gap * 2) / self.region_height, (H_max - gap * 2) / self.region_width)
 
     def draw_reset(self, predators=[], preys=[]):
         self.canvas.delete("all")
@@ -53,31 +56,31 @@ class Maze(tk.Tk, object):
         for r in range(self.region_height):
             for c in range(self.region_width):
                 x, y = c * self.UNIT, r * self.UNIT
-                if not self.maps.cell_visable[r][c]:
-                    self.canvas.create_rectangle(x, y, x+self.UNIT, y+self.UNIT, fill='#bfbfbf', width=0)
+                if not self.maps.cell_visible[r][c]:
+                    self.canvas.create_rectangle(x, y, x+self.UNIT, y+self.UNIT, fill='#bfbfbf', width=1, outline='#7f7f7f')
                 elif self.maps.cell_obstacle[r][c]:
-                    self.canvas.create_rectangle(x, y, x + self.UNIT, y + self.UNIT, fill='black', width=0)
+                    self.canvas.create_rectangle(x, y, x + self.UNIT, y + self.UNIT, fill='black', width=1, outline='#000000')
                 elif self.maps.is_closed(r, c):
-                    self.canvas.create_rectangle(x, y, x + self.UNIT, y + self.UNIT, fill='#3f3f3f', width=0)
+                    self.canvas.create_rectangle(x, y, x + self.UNIT, y + self.UNIT, fill='#3f3f3f', width=1, outline='#7f7f7f')
                 else:
                     pheromone = self.maps.cell_chemical[r][c]
                     from utils.color import get_color_by_pheromone
                     color = get_color_by_pheromone(pheromone)
-                    self.canvas.create_rectangle(x, y, x + self.UNIT, y + self.UNIT, fill=color, width=0)
+                    self.canvas.create_rectangle(x, y, x + self.UNIT, y + self.UNIT, fill=color, width=1, outline='#7f7f7f')
 
         # draw predators
         for predator in predators:
             r, c = predator.position
             x, y = c * self.UNIT, r * self.UNIT
 
-            delta = int(self.UNIT * 0.25)
+            delta = int(self.UNIT * 0.15)
             if predator.stuck:
-                self.canvas.create_oval(x - delta, y - delta, x + self.UNIT + delta, y + self.UNIT + delta, width=2)
+                self.canvas.create_oval(x - delta * 2, y - delta * 2, x + self.UNIT + delta * 2, y + self.UNIT + delta * 2, width=1.5)
 
             if predator.chosen or len(predator.planned_path) > 0:
-                self.canvas.create_oval(x , y, x + self.UNIT, y + self.UNIT, fill='blue', width=0)
+                self.canvas.create_oval(x + delta, y + delta, x + self.UNIT - delta, y + self.UNIT - delta, fill='blue', width=0)
             else:
-                self.canvas.create_oval(x, y, x + self.UNIT, y + self.UNIT, fill='red', width=0)
+                self.canvas.create_oval(x + delta, y + delta, x + self.UNIT - delta, y + self.UNIT - delta, fill='red', width=0)
 
         for prey in preys:
             if prey.found:

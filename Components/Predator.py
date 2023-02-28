@@ -2,7 +2,7 @@ import numpy as np
 from Components.Components import MoveComponent
 from collections import deque
 
-T = 20
+T = 25
 
 chemical_inc = 0.30
 chemical_eva = 0.9995
@@ -29,7 +29,7 @@ class Predator(MoveComponent):
         self.__sight = sight
         self.maps = maps
 
-        self.history = deque(maxlen=T)
+        self.history = {"pos": deque(maxlen=T), "chemical": deque(maxlen=T)}
 
         self.stuck = False
         self.chosen = False
@@ -40,54 +40,39 @@ class Predator(MoveComponent):
 
     def visit(self):
         r, c = self.position
-        self.history.append((r, c))
         self.maps.cell_visited[r][c] = 1
         self.maps.cell_chemical[r][c] += chemical_inc
 
+        self.history["pos"].append((r, c))
+        self.history["chemical"].append(self.maps.cell_chemical[r][c])
+
         for r_, c_ in self.visible_positions():
-            self.maps.cell_visable[r_][c_] = 1
+            if self.maps.in_range(r_, c_):
+                self.maps.cell_visible[r_][c_] = 1
 
         self.detect()
 
     def visible_positions(self):
-        """向各方向做主序，遇到障碍则该方向中断"""
-        positions = []
-        motions = [(0, -1), (-1, 0), (0, +1), (+1, 0), (0, -1)]
+        """Flood fill"""
+        motions = [(0, -1), (-1, 0), (0, +1), (+1, 0)]
         r, c = self.position
-        for m in motions[:4]:
-            rr, cc = r, c
-            for d in range(1, self.__sight + 1):
-                rr += m[0]
-                cc += m[1]
-                positions.append((rr, cc))
-                if self.maps.obstacle(rr, cc):
-                    break
-        for _ in range(4):
-            m1 = motions[_]
-            m2 = motions[_+1]
-            rr, cc = r, c
-            for d in range(1, self.__sight + 1):
-                rr += m1[0] + m2[0]
-                cc += m1[1] + m2[1]
-                if not self.maps.obstacle(rr, cc) and not self.maps.obstacle(r - m1[0], c - m1[1]) and not self.maps.obstacle(r - m2[0], c - m2[1]):
-                    positions.append((rr, cc))
-                else:
-                    break
-                rrr, ccc = rr, cc
-                for dd in range(1, self.__sight - d + 1):
-                    rrr += m1[0]
-                    ccc += m1[1]
-                    positions.append((rrr, ccc))
-                    if not self.maps.passable(rrr, ccc):
-                        break
+        positions = [(r, c)]
 
-                rrr, ccc = rr, cc
-                for dd in range(1, self.__sight - d + 1):
-                    rrr += m2[0]
-                    ccc += m2[1]
-                    positions.append((rrr, ccc))
-                    if not self.maps.passable(rrr, ccc):
-                        break
+        mark = np.zeros((self.__sight + 1, self.__sight + 1), dtype=bool)
+        mark[0][0] = True
+
+        q = deque()
+        q.append((0, 0))
+        while len(q) > 0:
+            dr, dc = q.popleft()
+            for mr, mc in motions:
+                dr_, dc_ = dr + mr, dc + mc
+                if abs(dr_)<=self.__sight and abs(dc_)<=self.__sight and self.maps.in_range(r+dr_, c+dc_) and not mark[dr_][dc_]:
+                    mark[dr_][dc_] = True
+                    positions.append((r+dr_, c+dc_))
+                    if not self.maps.obstacle(r+dr_, c+dc_):
+                        q.append((dr_, dc_))
+
         return positions
 
     def close(self):
@@ -134,7 +119,7 @@ class Predator(MoveComponent):
             # cmd = cmd_list[np.argmax(probs)]                # deterministic
         else:                   # random move
             cmd_list, neighbor_list = self.moveable_directions()
-            probs = np.ones_like(cmd_list) / len(cmd_list)
+            probs = np.ones_like(cmd_list, dtype=float) / len(cmd_list)
             cmd = np.random.choice(cmd_list, p=probs)       # probabilistic
             # cmd = cmd_list[np.argmax(probs)]                # deterministic
 
@@ -146,11 +131,14 @@ class Predator(MoveComponent):
             return
         if len(self.planned_path) > 0:
             return
-        if len(self.history) == self.history.maxlen:
+        if len(self.history["pos"]) == self.history["pos"].maxlen:
             bin = set()
-            for x in self.history:
+            for x in self.history["pos"]:
                 bin.add(x)
-            if len(bin) < len(self.history) * Predator.stuck_ratio / 100:
+            if len(bin) < len(self.history["pos"]) * Predator.stuck_ratio / 100:
                 print('Depression Agent#', self.num)
                 self.stuck = True
-                self.history.clear()
+                self.history["pos"].clear()
+
+                import winsound
+                winsound.Beep(1000, 800)        # 发出警报声

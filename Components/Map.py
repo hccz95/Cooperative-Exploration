@@ -12,7 +12,7 @@ class Map(object):
         self.region_height, self.region_width = grids.shape
 
         self.cell_visited = np.zeros_like(grids, dtype=bool)
-        self.cell_visable = np.zeros_like(grids, dtype=bool)
+        self.cell_visible = np.zeros_like(grids, dtype=bool)
         self.cell_chemical = np.zeros_like(grids, dtype=float)
         self.cell_obstacle = np.array(grids != '.', dtype=bool)
         self.cell_closed = np.zeros_like(grids, dtype=int)
@@ -66,7 +66,7 @@ class Map(object):
         return False
 
     def obstacle(self, r, c):
-        return self.cell_obstacle[r][c]
+        return not self.in_range(r, c) or self.cell_obstacle[r][c]
 
     def chemical(self, r, c):
         return self.cell_chemical[r][c]
@@ -100,7 +100,7 @@ class Map(object):
 
     def xy2rc(self, pixel):
         x, y = pixel
-        r, c = y // self.UNIT, x // self.UNIT
+        r, c = int(y / self.UNIT), int(x // self.UNIT)
         return r, c
 
     def rc2xy(self, position, mode='center'):

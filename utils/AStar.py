@@ -20,6 +20,8 @@ class AStar:
         self.s_goal = None
         self.heuristic_type = heuristic_type
 
+        self.global_visible = False
+
         if self.heuristic_type == "manhattan":
             self.u_set = motions[:4]  # feasible input set
         else:
@@ -30,13 +32,14 @@ class AStar:
         self.PARENT = dict()  # recorded parent
         self.g = dict()  # cost to come
 
-    def searching(self, s_start, s_goal):
+    def searching(self, s_start, s_goal, global_visible=False):
         """
         A_star Searching.
         :return: path, visited order
         """
         self.s_start = s_start
         self.s_goal = s_goal
+        self.global_visible = global_visible
 
         self.OPEN = []  # priority queue / OPEN set
         self.CLOSED = []  # CLOSED set / VISITED order
@@ -103,9 +106,10 @@ class AStar:
         :return: True: is collision / False: not collision
         """
 
+        if not self.global_visible:
+            if not self.maps.cell_visible[s_start[0]][s_start[1]] or not self.maps.cell_visible[s_end[0]][s_end[1]]:
+                return True
         if self.maps.obstacle(s_start[0], s_start[1]) or self.maps.obstacle(s_end[0], s_end[1]):
-            return True
-        if not self.maps.cell_visable[s_start[0]][s_start[1]] or not self.maps.cell_visable[s_end[0]][s_end[1]]:
             return True
 
         if s_start[0] != s_end[0] and s_start[1] != s_end[1]:

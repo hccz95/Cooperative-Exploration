@@ -1,14 +1,19 @@
 import numpy as np
 
-
-def load_grids(map_file):
-    with open(map_file, 'r') as f:
-        _ = f.readline()
+def load_scene(scene_file):
+    with open(scene_file, 'r') as f:
         _, height = f.readline().split()
         height = int(height)
         _, width = f.readline().split()
         width = int(width)
-        _ = f.readline()
+        _, base_r, base_c = f.readline().split()
+        try:
+            base_r = int(base_r)
+            base_c = int(base_c)
+        except:
+            pass
+        _, num_agents = f.readline().split()
+        num_agents = int(num_agents)
         grids = []
         for r in range(height):
             row = f.readline().strip()
@@ -16,7 +21,7 @@ def load_grids(map_file):
             for c in range(width):
                 grids[r].append(row[c])
     grids = np.array(grids)
-    return grids
+    return grids, base_r, base_c, num_agents
 
 
 def distance_euclid(pos0, pos1):
