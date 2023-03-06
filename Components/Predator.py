@@ -21,7 +21,7 @@ class Predator(MoveComponent):
 
     aco_c = 0.02  # Husain_2022中c为20，但是这里将信息素归一化了，所以对应c也要成比例减小
     aco_alpha = 2
-    stuck_ratio = 25
+    stuck_ratio = 30
 
     def __init__(self, position, num, region_size, sight=1, maps=None):
         super(Predator, self).__init__(position, num, region_size, maps)
@@ -58,7 +58,7 @@ class Predator(MoveComponent):
         r, c = self.position
         positions = [(r, c)]
 
-        mark = np.zeros((self.__sight + 1, self.__sight + 1), dtype=bool)
+        mark = np.zeros((self.__sight * 2 + 1, self.__sight * 2 + 1), dtype=bool)
         mark[0][0] = True
 
         q = deque()
@@ -128,9 +128,9 @@ class Predator(MoveComponent):
 
     def detect(self):
         if self.stuck:
-            return
+            return True
         if len(self.planned_path) > 0:
-            return
+            return False
         if len(self.history["pos"]) == self.history["pos"].maxlen:
             bin = set()
             for x in self.history["pos"]:
@@ -142,3 +142,6 @@ class Predator(MoveComponent):
 
                 import winsound
                 winsound.Beep(1000, 800)        # 发出警报声
+
+                return True
+        return False

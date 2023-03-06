@@ -9,7 +9,7 @@ size = 1
 step_size = 1
 gap = 5
 H_1 = 40 + gap * 2
-H_2 = 200
+H_2 = 50
 
 
 class Maze(tk.Tk, object):
@@ -33,14 +33,14 @@ class Maze(tk.Tk, object):
         self.indicate.place(x=X_2, y=gap, anchor='nw')
 
         # header模块
-        self.f_header = tk.Frame(self, height=H_2, width=W_2, highlightthickness=0, bg="#CDC0B0")
+        self.f_header = tk.Frame(self, height=H_2, width=W_2, highlightthickness=0, bg="#FFFFFF")
         self.f_header.place(x=X_2, y=gap + H_1 + gap, anchor="nw")
 
         # 图例模块
         img_open = Image.open('Legend.png')
         self.img_png = ImageTk.PhotoImage(img_open)
         self.legend = tk.Label(self, image=self.img_png, height=H_max - H_1 - H_2 - gap * 4,
-                                                         width=W_2, bg='#CDC0B0')
+                                                         width=W_2, bg='#CDC0B0', anchor='se')
         self.legend.place(x=X_2, y=gap + H_1 + gap + H_2 + gap, anchor='nw')
 
     def load_maps(self, maps):

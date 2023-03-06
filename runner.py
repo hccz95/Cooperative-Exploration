@@ -11,6 +11,11 @@ from Components.Map import Map
 from Components.Predator import Predator
 from collections import deque
 from utils import load_scene
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import matplotlib
+matplotlib.use("TkAgg")     # 防止绘图闪烁
+default_tips = "The swarm is exploring..."
 
 
 class SimEnv(object):
@@ -35,26 +40,43 @@ class SimEnv(object):
         self.b_next.config(state="disabled")
 
         self.scale_aco_c = tk.Scale(self.win.indicate, label="aco_c", from_=0., to=1., orient=tk.HORIZONTAL, length=200, resolution=0.05, tickinterval=0.2)
-        self.scale_aco_c.set(0.05)
+        self.scale_aco_c.set(Predator.aco_c)
         # self.scale_aco_c.place(x=5, y=60, anchor='nw')
 
         self.scale_aco_a = tk.Scale(self.win.indicate, label="aco_a", from_=1, to=20, orient=tk.HORIZONTAL, length=200, resolution=1, tickinterval=5)
-        self.scale_aco_a.set(2)
+        self.scale_aco_a.set(Predator.aco_alpha)
         # self.scale_aco_a.place(x=5, y=150, anchor='nw')
 
         self.scale_stuck_ratio = tk.Scale(self.win.indicate, label="ratio (%)", from_=0, to=100, orient=tk.HORIZONTAL, length=200, resolution=5, tickinterval=20)
-        self.scale_stuck_ratio.set(40)
+        self.scale_stuck_ratio.set(Predator.stuck_ratio)
         # self.scale_stuck_ratio.place(x=5, y=240, anchor='nw')
 
-        # 底部信息
-        self.label_tips = tk.Label(self.win.f_header, text="Click START to start the search process", width=300, height=200, bg="white", font=("Times New Roman", 14), wraplength=self.win.f_header.winfo_vrootwidth())
+        # 提示信息
+        font_size = 15
+        w_fa, h_fa = self.win.f_header.winfo_reqwidth(), self.win.f_header.winfo_reqheight()
+        self.label_tips = tk.Label(self.win.f_header, text="Click [START] to start the coverage task.", bg="white",
+                            font=("Times New Roman", font_size), wraplength=w_fa)
         self.label_tips.place(x=5, y=5, anchor="nw")
 
-        self.load_scene()
+        # 绘图区
+        self.fig, self.ax = plt.subplots(figsize=(4, 2.4), dpi=100)
+        plt.xlim(xmin=0, xmax=1000)
+        plt.ylim(ymin=0., ymax=1.)
 
-        self.step_cnt = 0
-        self.planner = AStar(self.maps, "manhattan")
-        self.chosen_predator = None
+        plt.xlabel('Steps')
+        plt.ylabel('Coverage(%)')
+
+        plt.grid()
+
+        plt.tight_layout()
+        # plt.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.1)
+
+        self.curve = FigureCanvasTkAgg(self.fig, master=self.win.legend)
+        self.curve.draw()
+        self.curve.get_tk_widget().place(x=0, y=0)
+
+        # 加载场景
+        self.load_scene()
 
         super(SimEnv, self).__init__()
 
@@ -78,15 +100,19 @@ class SimEnv(object):
         if len(self.scenes) == 0:
             self.b_next.config(state="disabled")
 
+        self.step_cnt = 0
+        self.planner = AStar(self.maps, "manhattan")
+        self.chosen_predator = None
+
     def run(self):
         self.win.draw_reset(self.predators)
         self.win.canvas.update()
 
         self.win.mainloop()
 
-    def cmd_start(self, key=None):
+    def cmd_start(self):
         print('Cmd: Start')
-        self.label_tips.config(text="The main process is running")
+        self.label_tips.config(text=default_tips)
 
         self.b_start.config(state="disabled")
 
@@ -114,38 +140,42 @@ class SimEnv(object):
             coverage = cnt_visible / cnt_total
             stat.append(coverage)
 
-            # # 计算覆盖率的微分，如果太慢则报警
-            # T = 50
-            # if self.step_cnt >= T and (stat[-1] - stat[-T])/T < 0.0001:
-            #     print("Slow")
-            #
-            # if self.step_cnt % 1000 == 0 or coverage > 0.95:
-            #     k_s = [(stat[i] - stat[i-T]) / T for i in range(T, len(stat))]
-            #     k_s_x = [i for i in range(T, len(stat))]
-            #
-            #     import matplotlib.pyplot as plt
-            #     plt.figure()
-            #     plt.plot(k_s_x, k_s)
-            #     plt.savefig('figs/%04d.png'%self.step_cnt)
-            #     plt.close()
+            # 计算覆盖率的微分，如果太慢则报警
+            T = 50
+            if self.step_cnt >= T and (stat[-1] - stat[-T])/T < 0.0001:
+                print("Slow")
+                self.label_tips.config(text="Too Slow!", bg='red')
 
             if coverage > 0.95:
-                self.label_tips.config(text="Mission Completed!")
+                print("Step# %d, Coverage > 0.95" % self.step_cnt)
+
+                if len(self.scenes) > 0:
+                    self.b_next.config(state="normal")
+                    self.label_tips.config(text="Click [NEXT] to a New Task!", bg='green')
+                else:
+                    self.label_tips.config(text="Mission Completed, Thank You!", bg='green')
+
+                self.label_tips.update()
                 if len(self.scenes) > 0:
                     self.b_next.config(state="normal")
                 break
             if self.step_cnt % 100 == 0:
                 print('Step#', self.step_cnt, ' Coverage:', coverage)
 
-            if key:
-                break
+            # draw coverage curve
+            if self.step_cnt % 2 == 0:
+                self.ax.plot(stat, 'b')
+                self.curve.draw()
 
             # if time.time() - time_stamp < 0.5:
             #     time.sleep(time.time() - time_stamp)
 
-    def cmd_next(self, key=None):
+    def cmd_next(self):
         self.load_scene()
         self.b_start.config(state="normal")
+        self.b_next.config(state="disabled")
+
+        self.cmd_start()
 
     def click(self, event):
         print("Single Click")
@@ -235,7 +265,10 @@ class SimEnv(object):
             if predator.stuck:
                 stuck_cnt += 1
         if stuck_cnt:
-            self.label_tips.config(text="%d agent(s) stucked!" % stuck_cnt, bg='red')
+            self.label_tips.config(bg='red')
+            self.label_tips.config(text="%d agent(s) stucked!" % stuck_cnt)
+        else:
+            self.label_tips.config(bg='white', text=default_tips)
 
         # # 设置一些禁区，避免重复访问
         # for predator in self.predators:
