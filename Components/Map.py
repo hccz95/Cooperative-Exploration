@@ -30,6 +30,8 @@ class Map(object):
             for c in range(self.region_width):
                 if mark[r][c]:
                     continue
+                if grids[r][c] != '.':
+                    continue
                 block = deque()
                 q = deque()
                 mark[r][c] = True
@@ -37,7 +39,7 @@ class Map(object):
                 while len(q) > 0:
                     r_, c_ = q.pop()
                     block.append((r_, c_))
-                    if self.in_range(r_+1, c_) and not mark[r_+1][c_] and grids[r_+1][c] == '.':
+                    if self.in_range(r_+1, c_) and not mark[r_+1][c_] and grids[r_+1][c_] == '.':
                         mark[r_+1][c_] = True
                         q.append((r_+1, c_))
                     if self.in_range(r_-1, c_) and not mark[r_-1][c_] and grids[r_-1][c_] == '.':
