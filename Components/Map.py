@@ -11,6 +11,9 @@ class Map(object):
         self.region_size = grids.shape
         self.region_height, self.region_width = grids.shape
 
+        self.free_grids = []
+        self.process_grids(grids)
+
         self.cell_visited = np.zeros_like(grids, dtype=bool)
         self.cell_visible = np.zeros_like(grids, dtype=bool)
         self.cell_chemical = np.zeros_like(grids, dtype=float)
@@ -19,41 +22,45 @@ class Map(object):
 
         self.step_cnt = 0
 
-        self.free_grids = []
-        self.process_grids(grids)
-
     def process_grids(self, grids):
-        mark = np.zeros_like(grids, dtype=bool)
-        from collections import deque
-        max_block = deque()
+        anc = np.zeros((self.region_height * self.region_width), dtype=int)
+        siz = np.zeros((self.region_height * self.region_width), dtype=int)
+        for i in range(self.region_height * self.region_width):
+            anc[i] = i
+            siz[i] = 1
+        def find_anc(x):
+            if anc[x] != x:
+                anc[x] = find_anc(anc[x])
+            return anc[x]
+        def union(p, q):
+            if p != q:
+                if siz[p] > siz[q]:
+                    anc[q] = p
+                    siz[p] += siz[q]
+                else:
+                    anc[p] = q
+                    siz[q] += siz[p]
+
+        max_block_anc = None
         for r in range(self.region_height):
             for c in range(self.region_width):
-                if mark[r][c]:
-                    continue
-                if grids[r][c] != '.':
-                    continue
-                block = deque()
-                q = deque()
-                mark[r][c] = True
-                q.append((r, c))
-                while len(q) > 0:
-                    r_, c_ = q.pop()
-                    block.append((r_, c_))
-                    if self.in_range(r_+1, c_) and not mark[r_+1][c_] and grids[r_+1][c_] == '.':
-                        mark[r_+1][c_] = True
-                        q.append((r_+1, c_))
-                    if self.in_range(r_-1, c_) and not mark[r_-1][c_] and grids[r_-1][c_] == '.':
-                        mark[r_-1][c_] = True
-                        q.append((r_-1, c_))
-                    if self.in_range(r_, c_+1) and not mark[r_][c_+1] and grids[r_][c_+1] == '.':
-                        mark[r_][c_+1] = True
-                        q.append((r_, c_+1))
-                    if self.in_range(r_, c_-1) and not mark[r_][c_-1] and grids[r_][c_-1] == '.':
-                        mark[r_][c_-1] = True
-                        q.append((r_, c_-1))
-                if len(max_block) < len(block):
-                    max_block = block
-        self.free_grids = max_block
+                if grids[r][c] == '.':
+                    id = self.rc2id((r, c))
+                    for dr, dc in [(0, -1), (-1, 0), (0, +1), (+1, 0)]:
+                        if self.in_range(r + dr, c + dc) and grids[r + dr][c + dc] == '.':
+                            id_ = self.rc2id((r + dr, c + dc))
+                            fa, fa_ = find_anc(id), find_anc(id_)
+                            union(fa, fa_)
+                    if max_block_anc is None or siz[find_anc(id)] > siz[max_block_anc]:
+                        max_block_anc = anc[id]
+
+        for r in range(self.region_height):
+            for c in range(self.region_width):
+                fa = find_anc(self.rc2id((r, c)))
+                if fa == max_block_anc:
+                    self.free_grids.append((r, c))
+                else:
+                    grids[r][c] = '#'
 
     def random_free_position(self):
         idx = np.random.randint(0, len(self.free_grids))
@@ -112,6 +119,10 @@ class Map(object):
             x += 0.5 * self.UNIT
             y += 0.5 * self.UNIT
         return x, y
+
+    def rc2id(self, position):
+        r, c = position
+        return r * self.region_width + c
 
 
 if __name__ == "__main__":
