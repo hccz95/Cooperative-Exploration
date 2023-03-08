@@ -5,6 +5,7 @@ import tkinter as tk
 import display
 import numpy as np
 import time
+import logging
 from utils import distance_euclid
 from utils.AStar import AStar
 from Components.Map import Map
@@ -17,18 +18,23 @@ import matplotlib
 matplotlib.use("TkAgg")     # 防止绘图闪烁
 default_tips = "The swarm is exploring..."
 
+logging.basicConfig(filename='Log.log', level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
+
 
 class SimEnv(object):
+    key_region = []
+
     def __init__(self, scenes=None):
 
         self.scenes = deque(scenes)
+
 
         self.win = display.Maze()
         self.win.title('HSI')
         self.win.bind("g", self.cmd_start)
 
         # 绑定鼠标左键事件
-        self.win.canvas.bind("<Button-1>", self.click)
+        self.win.canvas.bind("<Button-1>", self.left_click)
         self.win.canvas.bind("<Button-3>", self.right_click)   # 本来绑定的是双击左键，但是会同时触发单击左键，所以先用右键代替
 
         # 绑定Start按钮事件
@@ -60,16 +66,6 @@ class SimEnv(object):
 
         # 绘图区
         self.fig, self.ax = plt.subplots(figsize=(4, 2.4), dpi=100)
-        plt.xlim(xmin=0, xmax=1000)
-        plt.ylim(ymin=0., ymax=1.)
-
-        plt.xlabel('Steps')
-        plt.ylabel('Coverage(%)')
-
-        plt.grid()
-
-        plt.tight_layout()
-        # plt.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.1)
 
         self.curve = FigureCanvasTkAgg(self.fig, master=self.win.legend)
         self.curve.draw()
@@ -81,7 +77,10 @@ class SimEnv(object):
         super(SimEnv, self).__init__()
 
     def load_scene(self, ):
-        grids, base_r, base_c, num_predator = load_scene(self.scenes[0])
+        logging.info(f"Scene \"{self.scenes[0]}\" start....")
+
+        grids, base_r, base_c, num_predator, max_steps = load_scene(self.scenes[0])
+        self.max_steps = max_steps
         self.maps = Map(grids)
         self.scenes.popleft()
 
@@ -103,72 +102,77 @@ class SimEnv(object):
         self.step_cnt = 0
         self.planner = AStar(self.maps, "manhattan")
         self.chosen_predator = None
+        self.stat = []
+        self.key_region = []
+        self.last_slow = None
+
+        self.ax.cla()
+        self.ax.axhline(y=0.95, color='g', linestyle='--', linewidth=1.)
+        plt.xlim(xmin=0, xmax=max_steps)
+        plt.ylim(ymin=0., ymax=1.)
+        plt.xlabel('Steps')
+        plt.ylabel('Coverage(%)')
+        plt.grid()
+        plt.tight_layout()
+        # plt.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.1)
 
     def run(self):
-        self.win.draw_reset(self.predators)
+        self.win.draw_reset(self.predators, self.key_region)
         self.win.canvas.update()
 
         self.win.mainloop()
 
+    def run_until_complete(self):
+        time_stamp = time.time()
+
+        self.step_cnt += 1
+        logging.info(f"Step# {self.step_cnt} start.")
+
+        # get scale value
+        Predator.aco_c = self.scale_aco_c.get()
+        Predator.aco_alpha = self.scale_aco_a.get()
+        Predator.stuck_ratio = self.scale_stuck_ratio.get()
+
+        self.step()
+
+        coverage = self.stat[-1]
+        if self.step_cnt % 100 == 0:
+            print('Step#', self.step_cnt, ' Coverage:', coverage)
+
+        # draw coverage curve
+        if self.step_cnt % 2 == 0:
+            self.ax.plot(self.stat, 'b')
+            self.curve.draw()
+
+        self.win.draw_reset(self.predators, self.key_region)
+        self.win.canvas.update()
+
+        logging.info(f"Coverage: {round(coverage*100, 1)} %")
+        logging.info(f"Step# {self.step_cnt} end.")
+
+        if coverage > 0.95 or self.step_cnt >= self.max_steps:
+            print("Step# %d, Coverage > 0.95" % self.step_cnt)
+
+            if len(self.scenes) > 0:
+                self.b_next.config(state="normal")
+                self.label_tips.config(text="Click [NEXT] to A New Task!", bg='green')
+            else:
+                self.label_tips.config(text="Mission Completed, Thank You!", bg='green')
+            self.label_tips.update()
+
+            if len(self.scenes) > 0:
+                self.b_next.config(state="normal")
+
+            return
+
+        step_time = 0.5     # seconds
+        rest_time = int(max(0.01, step_time - (time.time() - time_stamp)) * 1000)
+        self.win.after(rest_time, self.run_until_complete)
+
     def cmd_start(self):
-        print('Cmd: Start')
         self.label_tips.config(text=default_tips)
-
         self.b_start.config(state="disabled")
-
-        stat = []
-
-        while True:
-            time_stamp = time.time()
-
-            self.step_cnt += 1
-
-            # get scale value
-            Predator.aco_c = self.scale_aco_c.get()
-            Predator.aco_alpha = self.scale_aco_a.get()
-            Predator.stuck_ratio = self.scale_stuck_ratio.get()
-
-            self.step()
-
-            self.win.draw_reset(self.predators)
-            self.win.canvas.update()
-
-            # count coverage rate
-
-            cnt_visible = self.maps.cell_visible.sum()
-            cnt_total = self.maps.cell_visible.size
-            coverage = cnt_visible / cnt_total
-            stat.append(coverage)
-
-            # 计算覆盖率的微分，如果太慢则报警
-            T = 50
-            if self.step_cnt >= T and (stat[-1] - stat[-T])/T < 0.0001:
-                print("Slow")
-                self.label_tips.config(text="Too Slow!", bg='red')
-
-            if coverage > 0.95:
-                print("Step# %d, Coverage > 0.95" % self.step_cnt)
-
-                if len(self.scenes) > 0:
-                    self.b_next.config(state="normal")
-                    self.label_tips.config(text="Click [NEXT] to a New Task!", bg='green')
-                else:
-                    self.label_tips.config(text="Mission Completed, Thank You!", bg='green')
-
-                self.label_tips.update()
-                if len(self.scenes) > 0:
-                    self.b_next.config(state="normal")
-                break
-            if self.step_cnt % 100 == 0:
-                print('Step#', self.step_cnt, ' Coverage:', coverage)
-
-            # draw coverage curve
-            if self.step_cnt % 2 == 0:
-                self.ax.plot(stat, 'b')
-                self.curve.draw()
-
-            # if time.time() - time_stamp < 0.5:
-            #     time.sleep(time.time() - time_stamp)
+        self.run_until_complete()
 
     def cmd_next(self):
         self.load_scene()
@@ -177,8 +181,8 @@ class SimEnv(object):
 
         self.cmd_start()
 
-    def click(self, event):
-        print("Single Click")
+    def left_click(self, event):
+        logging.info("Left Click mark")
 
         x, y = event.x, event.y
 
@@ -200,6 +204,7 @@ class SimEnv(object):
                 self.chosen_predator.chosen = False
                 self.chosen_predator = min_pred
                 min_pred.chosen = True
+                logging.info(f"Left Click: Select agent# {min_pred.num}!")
             else:               # 之前选定了一个stuck_agent，现在为其选定了Temp_Goal
                 r, c = self.maps.xy2rc((x, y))
                 path = self.planner.searching(self.chosen_predator.position, (r, c))
@@ -210,19 +215,22 @@ class SimEnv(object):
                     self.chosen_predator.planned_path = path
 
                     self.chosen_predator = None
+                    logging.info(f"Left Click: Select a valid goal ({r}, {c}) for the chosen agent# {self.chosen_predator.num}!")
                 else:                       # Temp_Goal不可达
                     self.label_tips.config(text="You chose an INVALID Goal!")
+                    logging.info(f"Left Click: Select a invalid goal!")
         else:
             if min_pred:        # 选定了一个新的stuck_agent
                 self.chosen_predator = min_pred
                 self.chosen_predator.chosen = True
-            elif stuck_cnt > 0: # 选定了一个Temp_Goal，需要自动分配stuck_agent
+                logging.info(f"Left Click: Select agent# {min_pred.num}!")
+            else:       # 选定了一个Temp_Goal，需要自动分配stuck_agent，如果没有stuck_agent，分配给最近的agent
                 r, c = self.maps.xy2rc((x, y))
                 # 将Temp_Goal分配到最近的stuck_agent
                 predator_num = []
                 predator_pos = []
                 for predator in self.predators:
-                    if predator.stuck:
+                    if predator.stuck or stuck_cnt == 0:
                         predator_num.append(predator.num)
                         predator_pos.append(predator.position)
                 idx = self._find_the_nearest_goal(r, c, predator_pos)
@@ -230,23 +238,34 @@ class SimEnv(object):
                     predator = self.predators[predator_num[idx]]
                     path = self.planner.searching(predator.position, (r, c))
                     if len(path) > 0:
-                        predator.stuck = False
+                        logging.info(f"Left Click: Select goal ({r}, {c}) for agent# {predator.num}!")
+                        if predator.stuck:
+                            logging.info(f"Event: Agent# {predator.num} turn back to unstuck")
+                            predator.stuck = False
                         predator.chosen = False
                         predator.goal = (r, c)
                         predator.planned_path = path
 
+        self.win.draw_reset(self.predators, self.key_region)
+        self.win.canvas.update()
+
     def right_click(self, event):
         print("Right Click")
+        logging.info("Right Click mark")
 
         x, y = event.x, event.y
         r, c = self.maps.xy2rc((x, y))
 
+        self.key_region.append([x, y, 10])
+
+        predator_num = []
         for predator in self.predators:
             pr, pc = predator.position
             px, py = self.maps.rc2xy((pr, pc))
             distance_to_mouse = distance_euclid((x, y), (px, py))
             if distance_to_mouse / self.win.UNIT < 0.25 * self.region_height:
                 if predator.stuck:
+                    logging.info(f"Agent# {predator.num} turn back to unstuck")
                     predator.stuck = False
                 # predator.goal = (r, c)
                 from utils.AStar import AStar
@@ -254,6 +273,12 @@ class SimEnv(object):
                 path = planner.searching((pr, pc), (r, c), global_visible=True)
                 if len(path) > 0:
                     predator.planned_path = path
+                    predator_num.append(predator.num)
+
+        logging.info(f"Right Click: Select a key point ({r}, {c}), Affected agents' ids are {predator_num}")
+
+        self.win.draw_reset(self.predators, self.key_region)
+        self.win.canvas.update()
 
     def step(self):
 
@@ -264,9 +289,33 @@ class SimEnv(object):
             predator.move()
             if predator.stuck:
                 stuck_cnt += 1
-        if stuck_cnt:
-            self.label_tips.config(bg='red')
-            self.label_tips.config(text="%d agent(s) stucked!" % stuck_cnt)
+
+        # count coverage rate
+        cnt_visible = self.maps.cell_visible.sum()
+        cnt_total = self.maps.cell_visible.size
+        coverage = cnt_visible / cnt_total
+        self.stat.append(coverage)
+
+        # 计算覆盖率的微分，如果太慢则报警
+        T = 50
+        min_dt = 0.3
+        is_slow = False
+        if self.step_cnt >= T and (self.stat[-1] - self.stat[-T]) / T < 0.0001:
+            print("Slow", min_dt * self.num_predator / cnt_total)  # (self.stat[-1] - self.stat[-T]) * cnt_total < min_dt * T * self.num_predator
+            is_slow = True
+
+        if stuck_cnt or is_slow:
+            tips = ""
+            if stuck_cnt:
+                tips += "%d agent(s) STUCK!" % stuck_cnt
+            if is_slow:
+                if tips: tips += "__"
+                tips += "The progress is too SLOW!"
+                if self.last_slow is None or self.step_cnt - self.last_slow >= T:
+                    import winsound
+                    winsound.Beep(1000, 1200)
+                    self.last_slow = self.step_cnt
+            self.label_tips.config(bg='red', text=tips)
         else:
             self.label_tips.config(bg='white', text=default_tips)
 

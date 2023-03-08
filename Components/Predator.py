@@ -1,3 +1,4 @@
+import logging
 import numpy as np
 from Components.Components import MoveComponent
 from collections import deque
@@ -137,6 +138,7 @@ class Predator(MoveComponent):
                 bin.add(x)
             if len(bin) < len(self.history["pos"]) * Predator.stuck_ratio / 100:
                 print('Depression Agent#', self.num)
+                logging.info(f"Event: Agent# {self.num} get stuck")
                 self.stuck = True
                 self.history["pos"].clear()
 

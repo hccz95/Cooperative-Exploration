@@ -49,7 +49,7 @@ class Maze(tk.Tk, object):
         self.region_height, self.region_width = maps.region_height, maps.region_width
         self.UNIT = min((H_max - gap * 2) / self.region_height, (H_max - gap * 2) / self.region_width)
 
-    def draw_reset(self, predators=[], preys=[]):
+    def draw_reset(self, predators=[], key_region=[]):
         self.canvas.delete("all")
 
         self.map_area = self.canvas.create_rectangle(2, 2, self.region_width * self.UNIT, self.region_height * self.UNIT, outline='black')
@@ -76,17 +76,25 @@ class Maze(tk.Tk, object):
             delta = int(self.UNIT * 0.15)
             if predator.stuck:
                 self.canvas.create_oval(x - delta * 2, y - delta * 2, x + self.UNIT + delta * 2, y + self.UNIT + delta * 2, width=1.5)
-
-            if predator.chosen or len(predator.planned_path) > 0:
-                self.canvas.create_oval(x + delta, y + delta, x + self.UNIT - delta, y + self.UNIT - delta, fill='blue', width=0)
+                self.canvas.create_oval(x + delta, y + delta, x + self.UNIT - delta, y + self.UNIT - delta, fill='blue' if predator.chosen else 'red', width=0)
+            elif len(predator.planned_path) > 0:
+                self.canvas.create_oval(x + delta, y + delta, x + self.UNIT - delta, y + self.UNIT - delta, fill='green', width=0)
             else:
                 self.canvas.create_oval(x + delta, y + delta, x + self.UNIT - delta, y + self.UNIT - delta, fill='red', width=0)
 
-        for prey in preys:
-            if prey.found:
-                r, c = prey.position
-                x, y = c * self.UNIT, r * self.UNIT
-                self.canvas.create_oval(x, y, x + self.UNIT, y + self.UNIT, fill='green', width=0)
+        for i, (x, y, t) in enumerate(key_region):
+            rad = int((self.region_width+self.region_height) * 0.125) * self.UNIT
+            if t % 2 == 0:
+                self.canvas.create_oval(x - rad, y - rad, x + rad, y + rad, outline='#7f7f7f', dash=(4, 11), width=2)
+            else:
+                self.canvas.create_oval(x - rad, y - rad, x + rad, y + rad, outline='#3f3f3f', dash=(6, 17), width=2)
+
+            rad = 1 * self.UNIT
+            self.canvas.create_oval(x - rad, y - rad, x + rad, y + rad, fill='#2f2f2f', width=0)
+            key_region[i][2] -= 1
+
+        while len(key_region) > 0 and key_region[0][2] == 0:
+            del key_region[0]
 
         self.canvas.update()
 
