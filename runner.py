@@ -26,6 +26,7 @@ class SimEnv(object):
 
         self.scenes = deque(scenes)
         self.args = args
+        Predator.args = args
 
         self.win = display.Maze()
         self.win.title('HSI')
@@ -132,7 +133,8 @@ class SimEnv(object):
         self.win.mainloop()
 
     def run_until_complete(self):
-        self.receive_cmd = True
+        if self.args.mode == "hsi":
+            self.receive_cmd = True
 
         time_stamp = time.time()
 
@@ -172,10 +174,14 @@ class SimEnv(object):
             self.b_next.config(state="normal")
 
             self.receive_cmd = False
+
+            if self.args.mode != 'hsi':
+                self.win.after(50, self.cmd_next)
+
             return
 
-        step_time = 0.5     # seconds
-        rest_time = int(max(0.01, step_time - (time.time() - time_stamp)) * 1000)
+        step_time = 0.8 if self.args.mode == 'hsi' else 0.0     # seconds
+        rest_time = int(max(0.001, step_time - (time.time() - time_stamp)) * 1000)
         self.win.after(rest_time, self.run_until_complete)
 
     def cmd_start(self):
@@ -327,8 +333,11 @@ class SimEnv(object):
                 if tips: tips += "__"
                 tips += "The progress is too SLOW!"
                 if self.last_slow is None or self.step_cnt - self.last_slow >= T:
-                    import winsound
-                    winsound.Beep(1000, 1200)
+                    logging.info("Slow Beep!")
+                    import winsound, threading
+                    thread = threading.Thread(target=winsound.Beep, args=(1000, 1200))
+                    thread.start()
+
                     self.last_slow = self.step_cnt
             self.label_tips.config(bg='red', text=tips)
         else:
@@ -358,6 +367,6 @@ class SimEnv(object):
         return -1
 
     def update_canvas(self):
-        if not self.args.no_gui:
+        if self.args.mode == "hsi" or self.args.gui:
             self.win.draw_reset(self.predators, self.key_region)
             self.win.canvas.update()

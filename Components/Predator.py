@@ -51,7 +51,8 @@ class Predator(MoveComponent):
             if self.maps.in_range(r_, c_):
                 self.maps.cell_visible[r_][c_] = 1
 
-        self.detect()
+        if Predator.args.mode == 'hsi':
+            self.detect()
 
     def visible_positions(self):
         """Flood fill"""
@@ -97,7 +98,7 @@ class Predator(MoveComponent):
                 self.maps.cell_closed[r][c] = self.maps.step_cnt
                 break
 
-    def move(self, mode="aco"):
+    def move(self):
         if self.stuck:
             return None
 
@@ -107,7 +108,12 @@ class Predator(MoveComponent):
             for cmd, nb in zip(cmd_list, neighbor_list):
                 if nb == nxt_nb:
                     break
-        elif mode == "aco":     # aco move
+        elif Predator.args.mode == "random":                   # random move
+            cmd_list, neighbor_list = self.moveable_directions()
+            probs = np.ones_like(cmd_list, dtype=float) / len(cmd_list)
+            cmd = np.random.choice(cmd_list, p=probs)       # probabilistic
+            # cmd = cmd_list[np.argmax(probs)]                # deterministic
+        else:   # Predator.args.mode in ["aco", "hsi"]:     # aco move
             probs = []
             cmd_list, neighbor_list = self.moveable_directions()
             for cmd, nb in zip(cmd_list, neighbor_list):
@@ -116,11 +122,6 @@ class Predator(MoveComponent):
                 p = (self.aco_c + pheromone) ** -self.aco_alpha
                 probs.append(p)
             probs = np.array(probs) / sum(probs)
-            cmd = np.random.choice(cmd_list, p=probs)       # probabilistic
-            # cmd = cmd_list[np.argmax(probs)]                # deterministic
-        else:                   # random move
-            cmd_list, neighbor_list = self.moveable_directions()
-            probs = np.ones_like(cmd_list, dtype=float) / len(cmd_list)
             cmd = np.random.choice(cmd_list, p=probs)       # probabilistic
             # cmd = cmd_list[np.argmax(probs)]                # deterministic
 
@@ -138,12 +139,13 @@ class Predator(MoveComponent):
                 bin.add(x)
             if len(bin) < len(self.history["pos"]) * Predator.stuck_ratio / 100:
                 print('Depression Agent#', self.num)
-                logging.info(f"Event: Agent# {self.num} get stuck")
+                logging.info(f"Event: Agent# {self.num} get stuck, Beep")
                 self.stuck = True
                 self.history["pos"].clear()
 
-                import winsound
-                winsound.Beep(1000, 800)        # 发出警报声
+                import winsound, threading
+                thread = threading.Thread(target=winsound.Beep, args=(1000, 800))   # 发出警报声
+                thread.start()
 
                 return True
         return False
