@@ -11,6 +11,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--name', type=str, help='user name', default="Anonymous")
     parser.add_argument('--seed', type=int, help='random seed', default=1)
+    parser.add_argument('--no_gui', action='store_true', help='close gui', default=False)
     args = parser.parse_args()
 
     if not os.path.exists('logs/'):
@@ -20,5 +21,5 @@ if __name__ == "__main__":
     np.random.seed(args.seed)
 
     scenes = ['scenes/' + map_name for map_name in os.listdir('scenes/')]
-    runner = SimEnv(scenes=scenes)
+    runner = SimEnv(scenes=scenes, args=args)
     runner.run()

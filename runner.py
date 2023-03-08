@@ -22,10 +22,10 @@ default_tips = "The swarm is exploring..."
 class SimEnv(object):
     key_region = []
 
-    def __init__(self, scenes=None):
+    def __init__(self, scenes=None, args=None):
 
         self.scenes = deque(scenes)
-
+        self.args = args
 
         self.win = display.Maze()
         self.win.title('HSI')
@@ -83,6 +83,7 @@ class SimEnv(object):
             self.b_next.config(state='disabled')
             return False
 
+        print(f"Scene \"{self.scenes[0]}\" start....")
         logging.info(f"Scene \"{self.scenes[0]}\" start....")
 
         grids, base_r, base_c, num_predator, max_steps = load_scene(self.scenes[0])
@@ -126,8 +127,7 @@ class SimEnv(object):
         return True
 
     def run(self):
-        self.win.draw_reset(self.predators, self.key_region)
-        self.win.canvas.update()
+        self.update_canvas()
 
         self.win.mainloop()
 
@@ -155,14 +155,13 @@ class SimEnv(object):
             self.ax.plot(self.stat, 'b', lw=1)
             self.curve.draw()
 
-        self.win.draw_reset(self.predators, self.key_region)
-        self.win.canvas.update()
+        self.update_canvas()
 
         logging.info(f"Coverage: {round(coverage*100, 1)} %")
         logging.info(f"Step# {self.step_cnt} end.")
 
         if coverage > 0.95 or self.step_cnt >= self.max_steps:
-            print("Step# %d, Coverage > 0.95" % self.step_cnt)
+            print("Step# %d, Coverage is %.4f" % (self.step_cnt, coverage))
 
             if coverage > 0.95:
                 self.label_tips.config(text="Success! Click [NEXT] to A New Task!", bg='green')
@@ -261,8 +260,7 @@ class SimEnv(object):
                         predator.goal = (r, c)
                         predator.planned_path = path
 
-        self.win.draw_reset(self.predators, self.key_region)
-        self.win.canvas.update()
+        self.update_canvas()
 
     def right_click(self, event):
         if not self.receive_cmd:
@@ -295,8 +293,7 @@ class SimEnv(object):
 
         logging.info(f"Right Click: Select a key point ({r}, {c}), Affected agents' ids are {predator_num}")
 
-        self.win.draw_reset(self.predators, self.key_region)
-        self.win.canvas.update()
+        self.update_canvas()
 
     def step(self):
 
@@ -319,7 +316,7 @@ class SimEnv(object):
         min_dt = 0.1        # 这里设置阈值为0.3 (平均一个agent每步能探索的新网格数，[0, 2*sight+1])
         is_slow = False
         if self.step_cnt >= T and (self.stat[-1] - self.stat[-T]) * cnt_total / T / self.num_predator < min_dt:
-            print("Slow", (self.stat[-1] - self.stat[-T]) * cnt_total / T / self.num_predator)
+            # print("Slow", (self.stat[-1] - self.stat[-T]) * cnt_total / T / self.num_predator)
             is_slow = True
 
         if stuck_cnt or is_slow:
@@ -359,3 +356,8 @@ class SimEnv(object):
                     return goals.index((r_, c_))
                 q.append((r_, c_))
         return -1
+
+    def update_canvas(self):
+        if not self.args.no_gui:
+            self.win.draw_reset(self.predators, self.key_region)
+            self.win.canvas.update()

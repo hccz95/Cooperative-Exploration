@@ -40,7 +40,7 @@ class Maze(tk.Tk, object):
         img_open = Image.open('Legend.png')
         self.img_png = ImageTk.PhotoImage(img_open)
         self.legend = tk.Label(self, image=self.img_png, height=H_max - H_1 - H_2 - gap * 4,
-                                                         width=W_2, bg='#CDC0B0', anchor='se')
+                                                         width=W_2, bg='#CDC0B0', anchor='s')
         self.legend.place(x=X_2, y=gap + H_1 + gap + H_2 + gap, anchor='nw')
 
     def load_maps(self, maps):
@@ -95,8 +95,6 @@ class Maze(tk.Tk, object):
 
         while len(key_region) > 0 and key_region[0][2] == 0:
             del key_region[0]
-
-        self.canvas.update()
 
 
 if __name__ == "__main__":
