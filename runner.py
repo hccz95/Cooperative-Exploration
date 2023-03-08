@@ -18,8 +18,6 @@ import matplotlib
 matplotlib.use("TkAgg")     # 防止绘图闪烁
 default_tips = "The swarm is exploring..."
 
-logging.basicConfig(filename='Log.log', level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
-
 
 class SimEnv(object):
     key_region = []
@@ -71,12 +69,20 @@ class SimEnv(object):
         self.curve.draw()
         self.curve.get_tk_widget().place(x=0, y=0)
 
+        self.receive_cmd = False        # 用这个变量来控制human只能在算法运行时进行操作
+
         # 加载场景
         self.load_scene()
 
         super(SimEnv, self).__init__()
 
     def load_scene(self, ):
+        if len(self.scenes) == 0:
+            self.label_tips.config(text="Mission Completed, Thank You!", bg='green')
+            self.label_tips.update()
+            self.b_next.config(state='disabled')
+            return False
+
         logging.info(f"Scene \"{self.scenes[0]}\" start....")
 
         grids, base_r, base_c, num_predator, max_steps = load_scene(self.scenes[0])
@@ -105,6 +111,7 @@ class SimEnv(object):
         self.stat = []
         self.key_region = []
         self.last_slow = None
+        self.receive_cmd = False
 
         self.ax.cla()
         self.ax.axhline(y=0.95, color='g', linestyle='--', linewidth=1.)
@@ -116,6 +123,8 @@ class SimEnv(object):
         plt.tight_layout()
         # plt.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.1)
 
+        return True
+
     def run(self):
         self.win.draw_reset(self.predators, self.key_region)
         self.win.canvas.update()
@@ -123,6 +132,8 @@ class SimEnv(object):
         self.win.mainloop()
 
     def run_until_complete(self):
+        self.receive_cmd = True
+
         time_stamp = time.time()
 
         self.step_cnt += 1
@@ -141,7 +152,7 @@ class SimEnv(object):
 
         # draw coverage curve
         if self.step_cnt % 2 == 0:
-            self.ax.plot(self.stat, 'b')
+            self.ax.plot(self.stat, 'b', lw=1)
             self.curve.draw()
 
         self.win.draw_reset(self.predators, self.key_region)
@@ -153,16 +164,15 @@ class SimEnv(object):
         if coverage > 0.95 or self.step_cnt >= self.max_steps:
             print("Step# %d, Coverage > 0.95" % self.step_cnt)
 
-            if len(self.scenes) > 0:
-                self.b_next.config(state="normal")
-                self.label_tips.config(text="Click [NEXT] to A New Task!", bg='green')
+            if coverage > 0.95:
+                self.label_tips.config(text="Success! Click [NEXT] to A New Task!", bg='green')
             else:
-                self.label_tips.config(text="Mission Completed, Thank You!", bg='green')
+                self.label_tips.config(text="Fail! Click [NEXT] to A New Task!", bg='red')
             self.label_tips.update()
 
-            if len(self.scenes) > 0:
-                self.b_next.config(state="normal")
+            self.b_next.config(state="normal")
 
+            self.receive_cmd = False
             return
 
         step_time = 0.5     # seconds
@@ -175,13 +185,18 @@ class SimEnv(object):
         self.run_until_complete()
 
     def cmd_next(self):
-        self.load_scene()
-        self.b_start.config(state="normal")
         self.b_next.config(state="disabled")
-
-        self.cmd_start()
+        if self.load_scene():
+            self.b_start.config(state="normal")     # TODO: 这句话是不是应该删掉
+            self.cmd_start()
+        else:
+            tk.messagebox.showinfo(title="SIM", message="Good Bye~")
+            self.win.quit()
 
     def left_click(self, event):
+        if not self.receive_cmd:
+            return
+
         logging.info("Left Click mark")
 
         x, y = event.x, event.y
@@ -224,13 +239,13 @@ class SimEnv(object):
                 self.chosen_predator = min_pred
                 self.chosen_predator.chosen = True
                 logging.info(f"Left Click: Select agent# {min_pred.num}!")
-            else:       # 选定了一个Temp_Goal，需要自动分配stuck_agent，如果没有stuck_agent，分配给最近的agent
+            else:       # 选定了一个Temp_Goal，需要自动分配stuck_agent，如果没有stuck_agent，分配给最近的aco agent
                 r, c = self.maps.xy2rc((x, y))
                 # 将Temp_Goal分配到最近的stuck_agent
                 predator_num = []
                 predator_pos = []
                 for predator in self.predators:
-                    if predator.stuck or stuck_cnt == 0:
+                    if predator.stuck or (stuck_cnt == 0 and len(predator.planned_path) == 0):  # 已经规划过路径的agent不受影响
                         predator_num.append(predator.num)
                         predator_pos.append(predator.position)
                 idx = self._find_the_nearest_goal(r, c, predator_pos)
@@ -250,6 +265,9 @@ class SimEnv(object):
         self.win.canvas.update()
 
     def right_click(self, event):
+        if not self.receive_cmd:
+            return
+
         print("Right Click")
         logging.info("Right Click mark")
 
@@ -298,10 +316,10 @@ class SimEnv(object):
 
         # 计算覆盖率的微分，如果太慢则报警
         T = 50
-        min_dt = 0.3
+        min_dt = 0.1        # 这里设置阈值为0.3 (平均一个agent每步能探索的新网格数，[0, 2*sight+1])
         is_slow = False
-        if self.step_cnt >= T and (self.stat[-1] - self.stat[-T]) / T < 0.0001:
-            print("Slow", min_dt * self.num_predator / cnt_total)  # (self.stat[-1] - self.stat[-T]) * cnt_total < min_dt * T * self.num_predator
+        if self.step_cnt >= T and (self.stat[-1] - self.stat[-T]) * cnt_total / T / self.num_predator < min_dt:
+            print("Slow", (self.stat[-1] - self.stat[-T]) * cnt_total / T / self.num_predator)
             is_slow = True
 
         if stuck_cnt or is_slow:
