@@ -76,11 +76,11 @@ class Maze(tk.Tk, object):
             delta = int(self.UNIT * 0.15)
             if predator.stuck:
                 self.canvas.create_oval(x - delta * 2, y - delta * 2, x + self.UNIT + delta * 2, y + self.UNIT + delta * 2, width=1.5)
-                self.canvas.create_oval(x + delta, y + delta, x + self.UNIT - delta, y + self.UNIT - delta, fill='blue' if predator.chosen else 'red', width=0)
+                self.canvas.create_oval(x + delta, y + delta, x + self.UNIT - delta, y + self.UNIT - delta, fill='blue' if predator.chosen else 'red', width=0, outline='blue' if predator.chosen else 'red')
             elif len(predator.planned_path) > 0:
-                self.canvas.create_oval(x + delta, y + delta, x + self.UNIT - delta, y + self.UNIT - delta, fill='green', width=0)
+                self.canvas.create_oval(x + delta, y + delta, x + self.UNIT - delta, y + self.UNIT - delta, fill='green', width=0, outline='green')
             else:
-                self.canvas.create_oval(x + delta, y + delta, x + self.UNIT - delta, y + self.UNIT - delta, fill='red', width=0)
+                self.canvas.create_oval(x + delta, y + delta, x + self.UNIT - delta, y + self.UNIT - delta, fill='red', width=0, outline='red')
 
         for i, (x, y, t) in enumerate(key_region):
             rad = int((self.region_width+self.region_height) * 0.125) * self.UNIT

@@ -90,6 +90,7 @@ class SimEnv(object):
         grids, base_r, base_c, num_predator, max_steps = load_scene(self.scenes[0])
         self.max_steps = max_steps
         self.maps = Map(grids)
+        self.scene = self.scenes[0]
         self.scenes.popleft()
 
         self.region_size = self.maps.region_size
@@ -180,7 +181,8 @@ class SimEnv(object):
 
             return
 
-        step_time = 0.8 if self.args.mode == 'hsi' else 0.0     # seconds
+        # seconds, 每个场景控制在180s以内
+        step_time = 180./self.max_steps if self.args.mode == 'hsi' else 0.0
         rest_time = int(max(0.001, step_time - (time.time() - time_stamp)) * 1000)
         self.win.after(rest_time, self.run_until_complete)
 
@@ -272,11 +274,16 @@ class SimEnv(object):
         if not self.receive_cmd:
             return
 
-        print("Right Click")
-        logging.info("Right Click mark")
-
         x, y = event.x, event.y
         r, c = self.maps.xy2rc((x, y))
+
+        if not self.maps.cell_visible[r][c] or self.maps.obstacle(r, c):
+            print("Invalid source")
+            logging.info("Invalid Right Click!")
+            return
+
+        print("Right Click")
+        logging.info("Right Click mark")
 
         self.key_region.append([x, y, 10])
 
