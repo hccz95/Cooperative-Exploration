@@ -164,7 +164,8 @@ class SimEnv(object):
         logging.info(f"Step# {self.step_cnt} end.")
 
         if coverage > 0.95 or self.step_cnt >= self.max_steps:
-            print("Step# %d, Coverage is %.4f" % (self.step_cnt, coverage))
+            print(f"Scene \"{self.scene}\" end, Step# {self.step_cnt}, Coverage is {coverage:.4f}")
+            logging.info(f"Scene \"{self.scene}\" end, Step# {self.step_cnt}, Coverage is {coverage:.4f}")
 
             if coverage > 0.95:
                 self.label_tips.config(text="Success! Click [NEXT] to A New Task!", bg='green')
