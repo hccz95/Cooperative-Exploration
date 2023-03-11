@@ -29,7 +29,7 @@ class SimEnv(object):
         self.args = args
         Predator.args = args
 
-        self.win = display.Maze()
+        self.win = display.Maze(args)
         self.win.title('HSI')
         self.win.bind("g", self.cmd_start)
 

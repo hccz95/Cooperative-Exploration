@@ -1,6 +1,8 @@
 # this file is based on Yong Zhao's code
 
 import tkinter as tk
+from tkinter.simpledialog import askstring
+import logging
 from PIL import Image, ImageTk
 
 H_max = 800
@@ -13,8 +15,10 @@ H_2 = 50
 
 
 class Maze(tk.Tk, object):
-    def __init__(self, ):
+    def __init__(self, args=None):
         super(Maze, self).__init__()
+
+        self.args = args
 
         self.configure(bg="#CDC0B0")                # 整体的背景色CDC0B0
         self.resizable(width=False, height=False)   # 窗口是否可以设置大小
@@ -42,6 +46,19 @@ class Maze(tk.Tk, object):
         self.legend = tk.Label(self, image=self.img_png, height=H_max - H_1 - H_2 - gap * 4,
                                                          width=W_2, bg='#CDC0B0', anchor='s')
         self.legend.place(x=X_2, y=gap + H_1 + gap + H_2 + gap, anchor='nw')
+
+        # 用对话框收集用户姓名
+        if args.mode == "hsi":
+            name = askstring(title="UserName", prompt="Please input your name!", initialvalue=None, parent=self)
+            if name is None or name == "":
+                name = "Anonymous"
+        else:
+            name = args.mode
+
+        logging.basicConfig(filename=f'logs/{name}.log', level=logging.INFO,
+                            format='%(asctime)s %(levelname)s %(message)s'
+                            )
+        logging.info(f"New Experiment, Username is {name}")
 
     def load_maps(self, maps):
         self.maps = maps
