@@ -17,6 +17,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib
 matplotlib.use("TkAgg")     # 防止绘图闪烁
 default_tips = "The swarm is exploring..."
+goal_coverage = 0.99
 
 
 class SimEnv(object):
@@ -117,7 +118,7 @@ class SimEnv(object):
         self.receive_cmd = False
 
         self.ax.cla()
-        self.ax.axhline(y=0.95, color='g', linestyle='--', linewidth=1.)
+        self.ax.axhline(y=goal_coverage, color='g', linestyle='--', linewidth=1.)
         plt.xlim(xmin=0, xmax=max_steps)
         plt.ylim(ymin=0., ymax=1.)
         plt.xlabel('Steps')
@@ -163,11 +164,11 @@ class SimEnv(object):
         logging.info(f"Coverage: {round(coverage*100, 1)} %")
         logging.info(f"Step# {self.step_cnt} end.")
 
-        if coverage > 0.95 or self.step_cnt >= self.max_steps:
+        if coverage > goal_coverage or self.step_cnt >= self.max_steps:
             print(f"Scene \"{self.scene}\" end, Step# {self.step_cnt}, Coverage is {coverage:.4f}")
             logging.info(f"Scene \"{self.scene}\" end, Step# {self.step_cnt}, Coverage is {coverage:.4f}")
 
-            if coverage > 0.95:
+            if coverage > goal_coverage:
                 self.label_tips.config(text="Success! Click [NEXT] to A New Task!", bg='green')
             else:
                 self.label_tips.config(text="Fail! Click [NEXT] to A New Task!", bg='red')
@@ -320,16 +321,14 @@ class SimEnv(object):
                 stuck_cnt += 1
 
         # count coverage rate
-        cnt_visible = self.maps.cell_visible.sum()
-        cnt_total = self.maps.cell_visible.size
-        coverage = cnt_visible / cnt_total
+        coverage = self.maps.get_coverage()
         self.stat.append(coverage)
 
         # 计算覆盖率的微分，如果太慢则报警
         T = 50
         min_dt = 0.1        # 这里设置阈值为0.3 (平均一个agent每步能探索的新网格数，[0, 2*sight+1])
         is_slow = False
-        if self.step_cnt >= T and (self.stat[-1] - self.stat[-T]) * cnt_total / T / self.num_predator < min_dt:
+        if self.step_cnt >= T and (self.stat[-1] - self.stat[-T]) * len(self.maps.free_grids) / T / self.num_predator < min_dt:
             # print("Slow", (self.stat[-1] - self.stat[-T]) * cnt_total / T / self.num_predator)
             is_slow = True
 
@@ -343,7 +342,7 @@ class SimEnv(object):
                 if self.last_slow is None or self.step_cnt - self.last_slow >= T:
                     logging.info("Slow Beep!")
                     import winsound, threading
-                    thread = threading.Thread(target=winsound.Beep, args=(1000, 1200))
+                    thread = threading.Thread(target=winsound.Beep, args=(1000, 400))
                     thread.start()
 
                     self.last_slow = self.step_cnt

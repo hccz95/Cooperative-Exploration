@@ -1,62 +1,13 @@
-import cv2 as cv
-import numpy as np
-
-
-# Hex to RGB
-def hex2rgb(hex_color):
-    r = (hex_color >> 16) & 255
-    g = (hex_color >> 8) & 255
-    b = (hex_color >> 0) & 255
-    return r, g, b
-
-
 # Hex to RGB
 def rgb2hex(rgb_color):
     r, g, b = rgb_color
     return ('#' + '{:02X}' * 3).format(r, g, b)
 
-
-# RGB颜色转换为HSL颜色
-def rgb2hsl(rgb):
-    rgb_normal = [[[rgb[0] / 255, rgb[1] / 255, rgb[2] / 255]]]
-    hls = cv.cvtColor(np.array(rgb_normal, dtype=np.float32), cv.COLOR_RGB2HLS)
-    return hls[0][0][0], hls[0][0][2], hls[0][0][1]  # hls to hsl
-
-
-# HSL颜色转换为RGB颜色
-def hsl2rgb(hsl):
-    hls = [[[hsl[0], hsl[2], hsl[1]]]]  # hsl to hls
-    rgb_normal = cv.cvtColor(np.array(hls, dtype=np.float32), cv.COLOR_HLS2RGB)
-    return int(rgb_normal[0][0][0] * 255), int(rgb_normal[0][0][1] * 255), int(rgb_normal[0][0][2] * 255)
-
-
-# HSL渐变色
-def get_multi_colors_by_hsl(begin_color, end_color, color_count):
-    if color_count < 2:
-        return []
-
-    colors = []
-    hsl1 = rgb2hsl(begin_color)
-    hsl2 = rgb2hsl(end_color)
-    steps = [(hsl2[i] - hsl1[i]) / (color_count - 1) for i in range(3)]
-    for color_index in range(color_count):
-        hsl = [hsl1[i] + steps[i] * color_index for i in range(3)]
-        colors.append(hsl2rgb(hsl))
-
-    return colors
-
-
-color_dict = {  # to render
-    'obstacle': (0, 0, 0),
-    'vacant': (255, 255, 255),
-    'unvisited': (128, 128, 128),
-}
-
-
-#   0xFDD819-0xE04C4C
-colors = get_multi_colors_by_hsl(hex2rgb(0xFDD819), hex2rgb(0xE04C4C), 100)     # 黄--红
-colors = [(255, 255, 255), ] + colors[:80]   # 信息素为0时，设为白色
+# #   0xFDD819-0xE04C4C
+# colors = get_multi_colors_by_hsl(hex2rgb(0xFDD819), hex2rgb(0xE04C4C), 100)     # 黄--红
+# colors = [(255, 255, 255), ] + colors[:80]   # 信息素为0时，设为白色
 # print(colors)
+colors = [(255, 255, 255), (253, 216, 25), (252, 213, 25), (252, 211, 26), (252, 209, 26), (251, 207, 27), (251, 205, 27), (251, 203, 28), (250, 201, 28), (250, 199, 29), (250, 197, 29), (249, 195, 30), (249, 193, 30), (249, 191, 31), (248, 189, 32), (248, 187, 32), (248, 186, 33), (247, 184, 33), (247, 182, 34), (247, 180, 34), (246, 178, 35), (246, 176, 35), (246, 174, 36), (246, 173, 36), (245, 171, 37), (245, 169, 37), (245, 167, 38), (244, 166, 38), (244, 164, 39), (244, 162, 40), (243, 160, 40), (243, 159, 41), (243, 157, 41), (242, 155, 42), (242, 154, 42), (242, 152, 43), (242, 151, 43), (241, 149, 44), (241, 147, 44), (241, 146, 45), (240, 144, 45), (240, 143, 46), (240, 141, 46), (239, 140, 47), (239, 138, 47), (239, 137, 48), (239, 135, 48), (238, 134, 49), (238, 132, 49), (238, 131, 50), (237, 130, 51), (237, 128, 51), (237, 127, 52), (237, 125, 52), (236, 124, 53), (236, 123, 53), (236, 121, 54), (235, 120, 54), (235, 119, 55), (235, 117, 55), (234, 116, 56), (234, 115, 56), (234, 114, 57), (234, 112, 57), (233, 111, 58), (233, 110, 58), (233, 109, 59), (232, 108, 59), (232, 106, 60), (232, 105, 60), (232, 104, 61), (231, 103, 61), (231, 102, 62), (231, 101, 62), (231, 100, 63), (230, 99, 63), (230, 97, 64), (230, 96, 64), (229, 95, 65), (229, 94, 65), (229, 93, 66)]
 
 
 def get_color_by_pheromone(p):

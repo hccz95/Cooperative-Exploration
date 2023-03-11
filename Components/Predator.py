@@ -22,7 +22,7 @@ class Predator(MoveComponent):
 
     aco_c = 0.02  # Husain_2022中c为20，但是这里将信息素归一化了，所以对应c也要成比例减小
     aco_alpha = 2
-    stuck_ratio = 30
+    stuck_ratio = 25
 
     def __init__(self, position, num, region_size, sight=1, maps=None):
         super(Predator, self).__init__(position, num, region_size, maps)
@@ -48,8 +48,9 @@ class Predator(MoveComponent):
         self.history["chemical"].append(self.maps.cell_chemical[r][c])
 
         for r_, c_ in self.visible_positions():
-            if self.maps.in_range(r_, c_):
-                self.maps.cell_visible[r_][c_] = 1
+            if self.maps.in_range(r_, c_) and not self.maps.cell_visible[r_][c_]:
+                self.maps.cell_visible[r_][c_] = True
+                self.maps.explored_cnt += ~self.maps.cell_obstacle[r_][c_]
 
         if Predator.args.mode == 'hsi':
             self.detect()
@@ -144,7 +145,7 @@ class Predator(MoveComponent):
                 self.history["pos"].clear()
 
                 import winsound, threading
-                thread = threading.Thread(target=winsound.Beep, args=(1000, 800))   # 发出警报声
+                thread = threading.Thread(target=winsound.Beep, args=(1000, 400))   # 发出警报声
                 thread.start()
 
                 return True

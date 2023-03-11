@@ -21,6 +21,7 @@ class Map(object):
         self.cell_closed = np.zeros_like(grids, dtype=int)
 
         self.step_cnt = 0
+        self.explored_cnt = 0
 
     def process_grids(self, grids):
         anc = np.zeros((self.region_height * self.region_width), dtype=int)
@@ -61,6 +62,7 @@ class Map(object):
                     self.free_grids.append((r, c))
                 else:
                     grids[r][c] = '#'
+        print('Free Grids:', len(self.free_grids), )
 
     def random_free_position(self):
         idx = np.random.randint(0, len(self.free_grids))
@@ -123,6 +125,9 @@ class Map(object):
     def rc2id(self, position):
         r, c = position
         return r * self.region_width + c
+
+    def get_coverage(self):
+        return self.explored_cnt / len(self.free_grids)
 
 
 if __name__ == "__main__":
