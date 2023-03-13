@@ -135,7 +135,7 @@ class SimEnv(object):
         self.win.mainloop()
 
     def run_until_complete(self):
-        if self.args.mode == "hsi":
+        if self.args.alg == "hsi":
             self.receive_cmd = True
 
         time_stamp = time.time()
@@ -178,13 +178,13 @@ class SimEnv(object):
 
             self.receive_cmd = False
 
-            if self.args.mode != 'hsi':
+            if self.args.alg != 'hsi':
                 self.win.after(50, self.cmd_next)
 
             return
 
         # seconds, 每个场景控制在180s以内
-        step_time = 180./self.max_steps if self.args.mode == 'hsi' else 0.0
+        step_time = 180./self.max_steps if self.args.alg == 'hsi' else 0.0
         rest_time = int(max(0.001, step_time - (time.time() - time_stamp)) * 1000)
         self.win.after(rest_time, self.run_until_complete)
 
@@ -193,14 +193,14 @@ class SimEnv(object):
 
         # 首次加载场景
         if self.load_scene():
-            self.label_tips.config(text=default_tips)
+            self.label_tips.config(bg='white', text=default_tips)
             self.b_start.config(state="disabled")
             self.run_until_complete()
 
     def cmd_next(self):
         self.b_next.config(state="disabled")
         if self.load_scene():
-            self.label_tips.config(text=default_tips)
+            self.label_tips.config(bg='white', text=default_tips)
             self.run_until_complete()
         else:
             tk.messagebox.showinfo(title="SIM", message="Good Bye~")
@@ -208,6 +208,8 @@ class SimEnv(object):
 
     def left_click(self, event):
         if not self.receive_cmd:
+            return
+        if self.args.mode == 'multiple':
             return
 
         logging.info("Left Click mark")
@@ -245,7 +247,7 @@ class SimEnv(object):
                     self.chosen_predator = None
                     logging.info(f"Left Click: Select a valid goal ({r}, {c}) for the chosen agent# {self.chosen_predator.num}!")
                 else:                       # Temp_Goal不可达
-                    self.label_tips.config(text="You chose an INVALID Goal!")
+                    self.label_tips.config(bg='red', text="You chose an INVALID Goal!")
                     logging.info(f"Left Click: Select a invalid goal!")
         else:
             if min_pred:        # 选定了一个新的stuck_agent
@@ -278,6 +280,8 @@ class SimEnv(object):
 
     def right_click(self, event):
         if not self.receive_cmd:
+            return
+        if self.args.mode == 'single':
             return
 
         x, y = event.x, event.y
@@ -328,7 +332,7 @@ class SimEnv(object):
         coverage = self.maps.get_coverage()
         self.stat.append(coverage)
 
-        if self.args.mode == "hsi":
+        if self.args.alg == "hsi":
             # 计算覆盖率的微分，如果太慢则报警
             T = 50
             min_dt = 0.1        # 这里设置阈值为0.3 (平均一个agent每步能探索的新网格数，[0, 2*sight+1])
@@ -379,7 +383,7 @@ class SimEnv(object):
         return -1
 
     def update_canvas(self):
-        if self.args.mode == "hsi" or self.args.gui:
+        if self.args.alg == "hsi" or self.args.gui:
             self.win.draw_reset(self.predators, self.key_region)
             img_file = self.screenshot_dir + f"/{self.step_cnt:04d}.png"
             with open(img_file, "wb") as fp:

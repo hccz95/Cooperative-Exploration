@@ -1,5 +1,4 @@
 import argparse
-import logging
 import random
 import os
 import numpy as np
@@ -11,7 +10,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--seed', type=int, help='random seed', default=1)
     parser.add_argument('--gui', action='store_true', help='open gui', default=False)
-    parser.add_argument('--mode', choices=["hsi", "aco", "random"], default="hsi")
+    parser.add_argument('--alg', choices=["hsi", "aco", "random"], default="hsi")
+    parser.add_argument('--mode', choices=["all", "single", "multiple"], default="all")
     args = parser.parse_args()
 
     random.seed(args.seed)

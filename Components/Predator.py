@@ -52,7 +52,7 @@ class Predator(MoveComponent):
                 self.maps.cell_visible[r_][c_] = True
                 self.maps.explored_cnt += ~self.maps.cell_obstacle[r_][c_]
 
-        if Predator.args.mode == 'hsi':
+        if Predator.args.alg == 'hsi':
             self.detect()
 
     def visible_positions(self):
@@ -109,12 +109,12 @@ class Predator(MoveComponent):
             for cmd, nb in zip(cmd_list, neighbor_list):
                 if nb == nxt_nb:
                     break
-        elif Predator.args.mode == "random":                   # random move
+        elif Predator.args.alg == "random":                   # random move
             cmd_list, neighbor_list = self.moveable_directions()
             probs = np.ones_like(cmd_list, dtype=float) / len(cmd_list)
             cmd = np.random.choice(cmd_list, p=probs)       # probabilistic
             # cmd = cmd_list[np.argmax(probs)]                # deterministic
-        else:   # Predator.args.mode in ["aco", "hsi"]:     # aco move
+        else:   # Predator.args.alg in ["aco", "hsi"]:     # aco move
             probs = []
             cmd_list, neighbor_list = self.moveable_directions()
             for cmd, nb in zip(cmd_list, neighbor_list):

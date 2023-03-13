@@ -52,12 +52,12 @@ class Maze(tk.Tk, object):
 
     def get_name(self):
         # 用对话框收集用户姓名
-        if self.args.mode == "hsi":
+        if self.args.alg == "hsi":
             name = askstring(title="UserName", prompt="Please input your name!", initialvalue=None, parent=self)
             if name is None or name == "":
                 name = "Anonymous"
         else:
-            name = self.args.mode
+            name = self.args.alg
         self.args.name = name
 
         if not os.path.exists(f'logs/{self.args.name}'):
