@@ -1,6 +1,7 @@
 #!/usr/bin/python
 # -*-coding:utf-8-*-
 
+import os
 import tkinter as tk
 import display
 import numpy as np
@@ -73,9 +74,6 @@ class SimEnv(object):
 
         self.receive_cmd = False        # 用这个变量来控制human只能在算法运行时进行操作
 
-        # 加载场景
-        self.load_scene()
-
         super(SimEnv, self).__init__()
 
     def load_scene(self, ):
@@ -127,11 +125,13 @@ class SimEnv(object):
         plt.tight_layout()
         # plt.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.1)
 
+        self.screenshot_dir = f"logs/{self.args.name}/screenshots_{self.scene[:-4]}"
+        if not os.path.exists(self.screenshot_dir):
+            os.makedirs(self.screenshot_dir)
+
         return True
 
     def run(self):
-        self.update_canvas()
-
         self.win.mainloop()
 
     def run_until_complete(self):
@@ -189,15 +189,19 @@ class SimEnv(object):
         self.win.after(rest_time, self.run_until_complete)
 
     def cmd_start(self):
-        self.label_tips.config(text=default_tips)
-        self.b_start.config(state="disabled")
-        self.run_until_complete()
+        self.win.get_name()
+
+        # 首次加载场景
+        if self.load_scene():
+            self.label_tips.config(text=default_tips)
+            self.b_start.config(state="disabled")
+            self.run_until_complete()
 
     def cmd_next(self):
         self.b_next.config(state="disabled")
         if self.load_scene():
-            self.b_start.config(state="normal")     # TODO: 这句话是不是应该删掉
-            self.cmd_start()
+            self.label_tips.config(text=default_tips)
+            self.run_until_complete()
         else:
             tk.messagebox.showinfo(title="SIM", message="Good Bye~")
             self.win.quit()
@@ -324,31 +328,32 @@ class SimEnv(object):
         coverage = self.maps.get_coverage()
         self.stat.append(coverage)
 
-        # 计算覆盖率的微分，如果太慢则报警
-        T = 50
-        min_dt = 0.1        # 这里设置阈值为0.3 (平均一个agent每步能探索的新网格数，[0, 2*sight+1])
-        is_slow = False
-        if self.step_cnt >= T and (self.stat[-1] - self.stat[-T]) * len(self.maps.free_grids) / T / self.num_predator < min_dt:
-            # print("Slow", (self.stat[-1] - self.stat[-T]) * cnt_total / T / self.num_predator)
-            is_slow = True
+        if self.args.mode == "hsi":
+            # 计算覆盖率的微分，如果太慢则报警
+            T = 50
+            min_dt = 0.1        # 这里设置阈值为0.3 (平均一个agent每步能探索的新网格数，[0, 2*sight+1])
+            is_slow = False
+            if self.step_cnt >= T and (self.stat[-1] - self.stat[-T]) * len(self.maps.free_grids) / T / self.num_predator < min_dt:
+                # print("Slow", (self.stat[-1] - self.stat[-T]) * cnt_total / T / self.num_predator)
+                is_slow = True
 
-        if stuck_cnt or is_slow:
-            tips = ""
-            if stuck_cnt:
-                tips += "%d agent(s) STUCK!" % stuck_cnt
-            if is_slow:
-                if tips: tips += "__"
-                tips += "The progress is too SLOW!"
-                if self.last_slow is None or self.step_cnt - self.last_slow >= T:
-                    logging.info("Slow Beep!")
-                    import winsound, threading
-                    thread = threading.Thread(target=winsound.Beep, args=(1000, 400))
-                    thread.start()
+            if stuck_cnt or is_slow:
+                tips = ""
+                if stuck_cnt:
+                    tips += "%d agent(s) STUCK!" % stuck_cnt
+                if is_slow:
+                    if tips: tips += "__"
+                    tips += "The progress is too SLOW!"
+                    if self.last_slow is None or self.step_cnt - self.last_slow >= T:
+                        logging.info("Slow Beep!")
+                        import winsound, threading
+                        thread = threading.Thread(target=winsound.Beep, args=(1000, 400))
+                        thread.start()
 
-                    self.last_slow = self.step_cnt
-            self.label_tips.config(bg='red', text=tips)
-        else:
-            self.label_tips.config(bg='white', text=default_tips)
+                        self.last_slow = self.step_cnt
+                self.label_tips.config(bg='red', text=tips)
+            else:
+                self.label_tips.config(bg='white', text=default_tips)
 
         # # 设置一些禁区，避免重复访问
         # for predator in self.predators:
@@ -376,4 +381,6 @@ class SimEnv(object):
     def update_canvas(self):
         if self.args.mode == "hsi" or self.args.gui:
             self.win.draw_reset(self.predators, self.key_region)
-            self.win.canvas.update()
+            img_file = self.screenshot_dir + f"/{self.step_cnt:04d}.png"
+            with open(img_file, "wb") as fp:
+                self.win.image.save(fp)

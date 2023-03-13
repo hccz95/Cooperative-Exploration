@@ -14,8 +14,6 @@ if __name__ == "__main__":
     parser.add_argument('--mode', choices=["hsi", "aco", "random"], default="hsi")
     args = parser.parse_args()
 
-    if not os.path.exists('logs/'):
-        os.makedirs('logs')
     random.seed(args.seed)
     np.random.seed(args.seed)
 
