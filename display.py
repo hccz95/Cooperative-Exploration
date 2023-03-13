@@ -65,7 +65,7 @@ class Maze(tk.Tk, object):
         logging.basicConfig(filename=f'logs/{self.args.name}/{self.args.name}.log', level=logging.INFO,
                             format='%(asctime)s %(levelname)s %(message)s'
                             )
-        logging.info(f"New Experiment, Username is {name}")
+        logging.info(f"New Experiment, Username is [{self.args.name}], Mode is [{self.args.mode}]")
 
 
     def load_maps(self, maps):
