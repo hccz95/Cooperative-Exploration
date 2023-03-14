@@ -1,9 +1,5 @@
 import numpy as np
 
-chemical_inc = 0.30
-chemical_eva = 0.80
-chemical_dif = 0.05
-
 
 class Map(object):
     def __init__(self, grids):
