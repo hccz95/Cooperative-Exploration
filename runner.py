@@ -276,8 +276,6 @@ class SimEnv(object):
                         predator.goal = (r, c)
                         predator.planned_path = path
 
-        self.update_canvas()
-
     def right_click(self, event):
         if not self.receive_cmd:
             return
@@ -315,8 +313,6 @@ class SimEnv(object):
                     predator_num.append(predator.num)
 
         logging.info(f"Right Click: Select a key point ({r}, {c}), Affected agents' ids are {predator_num}")
-
-        self.update_canvas()
 
     def step(self):
 
