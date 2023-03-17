@@ -12,6 +12,7 @@ if __name__ == "__main__":
     parser.add_argument('--gui', action='store_true', help='open gui', default=False)
     parser.add_argument('--alg', choices=["hsi", "aco", "random"], default="hsi")
     parser.add_argument('--mode', choices=["all", "single", "multiple"], default="all")
+    parser.add_argument('--nosync', action='store_true', help='not sync the step time', default=False)
     args = parser.parse_args()
 
     random.seed(args.seed)

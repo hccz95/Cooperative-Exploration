@@ -132,6 +132,8 @@ class SimEnv(object):
         return True
 
     def run(self):
+        if self.args.alg in ["aco", "random"]:
+            self.win.after(1000, self.cmd_start)
         self.win.mainloop()
 
     def run_until_complete(self):
@@ -184,8 +186,11 @@ class SimEnv(object):
             return
 
         # seconds, 每个场景控制在180s以内
-        step_time = 180./self.max_steps if self.args.alg == 'hsi' else 0.0
-        rest_time = int(max(0.001, step_time - (time.time() - time_stamp)) * 1000)
+        if self.args.nosync:
+            rest_time = 1
+        else:
+            step_time = 180./self.max_steps
+            rest_time = int(max(0.001, step_time - (time.time() - time_stamp)) * 1000)
         self.win.after(rest_time, self.run_until_complete)
 
     def cmd_start(self):
@@ -203,7 +208,8 @@ class SimEnv(object):
             self.label_tips.config(bg='white', text=default_tips)
             self.run_until_complete()
         else:
-            tk.messagebox.showinfo(title="SIM", message="Good Bye~")
+            if not (self.args.alg in ["aco", "random"]):
+                tk.messagebox.showinfo(title="SIM", message="Good Bye~")
             self.win.quit()
 
     def left_click(self, event):

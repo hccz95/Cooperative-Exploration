@@ -57,7 +57,7 @@ class Maze(tk.Tk, object):
             if name is None or name == "":
                 name = "Anonymous"
         else:
-            name = self.args.alg
+            name = f"{self.args.alg}_seed_{self.args.seed:02d}"
         self.args.name = name
 
         if not os.path.exists(f'logs/{self.args.name}'):
