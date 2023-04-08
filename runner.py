@@ -34,6 +34,8 @@ class SimEnv(object):
         self.win.title('HSI')
         self.win.bind("g", self.cmd_start)
 
+        self.win.bind("s", self.screenshot)
+
         # 绑定鼠标左键事件
         self.win.canvas.bind("<Button-1>", self.left_click)
         self.win.canvas.bind("<Button-3>", self.right_click)   # 本来绑定的是双击左键，但是会同时触发单击左键，所以先用右键代替
@@ -41,6 +43,8 @@ class SimEnv(object):
         # 绑定Start按钮事件
         self.b_start = tk.Button(self.win.indicate, text="START", command=self.cmd_start, font=("Times New Roman", 15, "bold"))
         self.b_start.place(x=5, y=5, anchor='nw')
+        self.b_start.config(state="disabled")
+
 
         self.b_next = tk.Button(self.win.indicate, text="NEXT", command=self.cmd_next, font=("Times New Roman", 15, "bold"))
         self.b_next.place(x=5 + self.b_start.winfo_reqwidth() + 5, y=5, anchor='nw')
@@ -129,11 +133,20 @@ class SimEnv(object):
         if not os.path.exists(self.screenshot_dir):
             os.makedirs(self.screenshot_dir)
 
+        self.update_canvas()
         return True
 
     def run(self):
-        if self.args.alg in ["aco", "random"]:
-            self.win.after(1000, self.cmd_start)
+        # self.win.after(100, self.win.get_name)
+        self.win.get_name()
+        if self.load_scene():
+            self.b_start.config(state="normal")
+            if self.args.alg in ["aco", "random"]:
+                self.win.after(1000, self.cmd_start)
+        else:
+            if not (self.args.alg in ["aco", "random"]):
+                tk.messagebox.showinfo(title="SIM", message="Good Bye~")
+            self.win.quit()
         self.win.mainloop()
 
     def run_until_complete(self):
@@ -161,11 +174,12 @@ class SimEnv(object):
             self.ax.plot(self.stat, 'b', lw=1)
             self.curve.draw()
 
-        self.update_canvas()
+        # self.update_canvas()
 
         logging.info(f"Coverage: {round(coverage*100, 1)} %")
         logging.info(f"Step# {self.step_cnt} end.")
 
+        task_end = False
         if coverage > goal_coverage or self.step_cnt >= self.max_steps:
             print(f"Scene \"{self.scene}\" end, Step# {self.step_cnt}, Coverage is {coverage:.4f}")
             logging.info(f"Scene \"{self.scene}\" end, Step# {self.step_cnt}, Coverage is {coverage:.4f}")
@@ -176,41 +190,40 @@ class SimEnv(object):
                 self.label_tips.config(text="Fail! Click [NEXT] to A New Task!", bg='red')
             self.label_tips.update()
 
-            self.b_next.config(state="normal")
-
             self.receive_cmd = False
+            task_end = True
 
-            if self.args.alg != 'hsi':
-                self.win.after(50, self.cmd_next)
+        self.update_canvas()
 
-            return
-
-        # seconds, 每个场景控制在180s以内
-        if self.args.nosync:
-            rest_time = 1
+        if task_end:
+            if self.load_scene():
+                self.b_next.config(state="normal")
+                if self.args.alg != 'hsi':
+                    self.win.after(50, self.cmd_next)
+            else:
+                if not (self.args.alg in ["aco", "random"]):
+                    tk.messagebox.showinfo(title="SIM", message="Good Bye~")
+                self.win.quit()
         else:
-            step_time = 180./self.max_steps
-            rest_time = int(max(0.001, step_time - (time.time() - time_stamp)) * 1000)
-        self.win.after(rest_time, self.run_until_complete)
+            # seconds, 每个场景控制在180s以内
+            if self.args.nosync:
+                rest_time = 1
+            else:
+                step_time = 180./self.max_steps
+                rest_time = int(max(0.001, step_time - (time.time() - time_stamp)) * 1000)
+            self.win.after(rest_time, self.run_until_complete)
 
     def cmd_start(self):
-        self.win.get_name()
-
-        # 首次加载场景
-        if self.load_scene():
-            self.label_tips.config(bg='white', text=default_tips)
-            self.b_start.config(state="disabled")
-            self.run_until_complete()
+        self.label_tips.config(bg='white', text=default_tips)
+        self.b_start.config(state="disabled")
+        self.update_canvas()
+        self.run_until_complete()
 
     def cmd_next(self):
         self.b_next.config(state="disabled")
-        if self.load_scene():
-            self.label_tips.config(bg='white', text=default_tips)
-            self.run_until_complete()
-        else:
-            if not (self.args.alg in ["aco", "random"]):
-                tk.messagebox.showinfo(title="SIM", message="Good Bye~")
-            self.win.quit()
+        self.label_tips.config(bg='white', text=default_tips)
+        self.update_canvas()
+        self.run_until_complete()
 
     def left_click(self, event):
         if not self.receive_cmd:
@@ -390,3 +403,14 @@ class SimEnv(object):
             img_file = self.screenshot_dir + f"/{self.step_cnt:04d}.png"
             with open(img_file, "wb") as fp:
                 self.win.image.save(fp)
+            self.screenshot(img_name=self.screenshot_dir + f"/{self.step_cnt:04d}.png")
+
+    def screenshot(self, key=None, img_name="screenshot.png"):
+        from PIL import ImageGrab
+        x = self.win.winfo_toplevel().winfo_rootx()  # + canvas.winfo_x()
+        y = self.win.winfo_toplevel().winfo_rooty()  # + canvas.winfo_y()
+        x1 = x + self.win.winfo_toplevel().winfo_width()
+        y1 = y + self.win.winfo_toplevel().winfo_height()
+        image = ImageGrab.grab((x, y, x1, y1))
+        # 保存屏幕截图
+        image.save(img_name)
