@@ -56,6 +56,8 @@ class Predator(MoveComponent):
             if self.maps.in_range(r_, c_) and not self.maps.cell_visible[r_][c_]:
                 self.maps.cell_visible[r_][c_] = True
                 self.maps.explored_cnt += ~self.maps.cell_obstacle[r_][c_]
+                if self.maps.passable(r_, c_):
+                    self.maps.add_frontier((r_, c_))
 
         if Predator.args.alg == 'hsi':
             self.detect()

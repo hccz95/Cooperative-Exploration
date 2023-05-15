@@ -19,6 +19,8 @@ class Map(object):
         self.step_cnt = 0
         self.explored_cnt = 0
 
+        self.frontiers = []
+
     def process_grids(self, grids):
         anc = np.zeros((self.region_height * self.region_width), dtype=int)
         siz = np.zeros((self.region_height * self.region_width), dtype=int)
@@ -124,6 +126,23 @@ class Map(object):
 
     def get_coverage(self):
         return self.explored_cnt / len(self.free_grids)
+
+    def add_frontier(self, position):
+        self.frontiers.append(position)
+
+    def prune_frontier(self):
+        for k in range(len(self.frontiers)-1, -1, -1):
+            position = self.frontiers[k]
+            if not self.is_frontier(position):
+                self.frontiers.pop(k)
+
+    def is_frontier(self, position):
+        r, c = position
+        for dr, dc in [(-1, 0), (0, +1), (+1, 0), (0, -1)]:
+            # 如果四周有未知邻居，则为frontier
+            if self.in_range(r+dr, c+dc) and not self.cell_visible[r+dr][c+dc]:
+                return True
+        return False
 
 
 if __name__ == "__main__":

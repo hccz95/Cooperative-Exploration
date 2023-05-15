@@ -343,11 +343,13 @@ class SimEnv(object):
             if predator.stuck:
                 stuck_cnt += 1
 
+        self.maps.prune_frontier()
+
         # count coverage rate
         coverage = self.maps.get_coverage()
         self.stat.append(coverage)
 
-        if self.args.alg == "hsi":
+        if self.args.alg == "hsi" or self.args.use_heuristic:
             # 计算覆盖率的微分，如果太慢则报警
             T = 50
             min_dt = 0.1        # 这里设置阈值为0.3 (平均一个agent每步能探索的新网格数，[0, 2*sight+1])
@@ -371,6 +373,12 @@ class SimEnv(object):
 
                         self.last_slow = self.step_cnt
                 self.label_tips.config(bg='red', text=tips)
+
+                # 如果加入了启发式规则，且当前step出现了警告，则进行干预
+                if self.args.use_heuristic:
+                    if stuck_cnt > 0 or self.last_slow == self.step_cnt:
+                        # TODO: operation based on heuristic rule
+                        pass
             else:
                 self.label_tips.config(bg='white', text=default_tips)
 
