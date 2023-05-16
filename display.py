@@ -92,6 +92,10 @@ class Maze(tk.Tk, object):
         # 给地图画一个边框
         self.draw.rectangle((2, 2, self.region_width * self.UNIT - 1, self.region_height * self.UNIT - 1), outline='black')
 
+        for r, c in self.maps.frontiers:
+            x, y = c * self.UNIT, r * self.UNIT
+            self.draw.rectangle((x, y, x + self.UNIT, y + self.UNIT), fill='#00ff00', width=1, outline='#7f7f7f')
+
         # draw predators
         for predator in predators:
             r, c = predator.position

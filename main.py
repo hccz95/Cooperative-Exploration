@@ -20,5 +20,6 @@ if __name__ == "__main__":
     np.random.seed(args.seed)
 
     scenes = [map_name for map_name in os.listdir('scenes/')]
+    scenes = scenes[8:]
     runner = SimEnv(scenes=scenes, args=args)
     runner.run()
