@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*-coding:utf-8-*-
 
-import os
+import os, random
 import tkinter as tk
 import display
 import numpy as np
@@ -104,6 +104,7 @@ class SimEnv(object):
             base_r, base_c = self.maps.random_free_position()
         self.predators = [Predator(position=(base_r, base_c), num=idx, region_size=self.region_size, sight=2, maps=self.maps)
                           for idx in range(num_predator)]
+        self.maps.prune_frontier()
 
         self.win.load_maps(self.maps)
         self.maps.UNIT = self.win.UNIT
@@ -262,9 +263,9 @@ class SimEnv(object):
                     self.chosen_predator.chosen = False
                     self.chosen_predator.goal = (r, c)
                     self.chosen_predator.planned_path = path
+                    logging.info(f"Left Click: Select a valid goal ({r}, {c}) for the chosen agent# {self.chosen_predator.num}!")
 
                     self.chosen_predator = None
-                    logging.info(f"Left Click: Select a valid goal ({r}, {c}) for the chosen agent# {self.chosen_predator.num}!")
                 else:                       # Temp_Goal不可达
                     self.label_tips.config(bg='red', text="You chose an INVALID Goal!")
                     logging.info(f"Left Click: Select a invalid goal!")
@@ -337,11 +338,13 @@ class SimEnv(object):
 
         stuck_cnt = 0
         # predator move
+        stuck_agent_ids = []
         for predator in self.predators:
             predator.maps.step_cnt = self.step_cnt
             predator.move()
             if predator.stuck:
                 stuck_cnt += 1
+                stuck_agent_ids.append(predator.num)
 
         self.maps.prune_frontier()
 
@@ -378,7 +381,30 @@ class SimEnv(object):
                 if self.args.use_heuristic:
                     if stuck_cnt > 0 or self.last_slow == self.step_cnt:
                         # TODO: operation based on heuristic rule
-                        pass
+                        if stuck_cnt > 0 and np.random.random() < 0.5: # and len(self.maps.frontiers) > 0:
+                            agent_id = np.random.choice(stuck_agent_ids)
+                            predator = self.predators[agent_id]
+                            frontier = random.choice(self.maps.frontiers)
+
+                            px, py = self.maps.rc2xy(predator.position)
+                            self.win.canvas.event_generate("<Button-1>", x=px, y=py)
+                            fx, fy = self.maps.rc2xy(frontier)
+                            self.win.canvas.event_generate("<Button-1>", x=fx, y=fy)
+
+                        else:
+                            best_frontier = random.choice(self.maps.frontiers)
+                            best_p_cnt = 0
+                            for frontier in self.maps.frontiers:
+                                p_cnt = 0
+                                for predator in self.predators:
+                                    if distance_euclid(predator.position, frontier) < 0.25 * self.region_height / self.win.UNIT:
+                                        p_cnt += 1
+                                if p_cnt > best_p_cnt:
+                                    best_frontier = frontier
+                                    best_p_cnt = p_cnt
+                            fx, fy = self.maps.rc2xy(best_frontier)
+                            self.win.canvas.event_generate("<Button-3>", x=fx, y=fy)
+
             else:
                 self.label_tips.config(bg='white', text=default_tips)
 
@@ -406,7 +432,7 @@ class SimEnv(object):
         return -1
 
     def update_canvas(self):
-        if self.args.alg == "hsi" or self.args.gui:
+        if self.args.gui:
             self.win.draw_reset(self.predators, self.key_region)
             img_file = self.screenshot_dir + f"/{self.step_cnt:04d}.png"
             with open(img_file, "wb") as fp:
