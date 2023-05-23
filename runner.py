@@ -142,10 +142,10 @@ class SimEnv(object):
         self.win.get_name()
         if self.load_scene():
             self.b_start.config(state="normal")
-            if self.args.alg in ["aco", "random"]:
+            if self.args.alg in ["aco", "random"] or self.args.use_heuristic:
                 self.win.after(1000, self.cmd_start)
         else:
-            if not (self.args.alg in ["aco", "random"]):
+            if not (self.args.alg in ["aco", "random"]) and not self.args.use_heuristic:
                 tk.messagebox.showinfo(title="SIM", message="Good Bye~")
             self.win.quit()
         self.win.mainloop()
@@ -199,10 +199,10 @@ class SimEnv(object):
         if task_end:
             if self.load_scene():
                 self.b_next.config(state="normal")
-                if self.args.alg != 'hsi':
+                if self.args.alg in ["aco", "random"] or self.args.use_heuristic:
                     self.win.after(50, self.cmd_next)
             else:
-                if not (self.args.alg in ["aco", "random"]):
+                if not (self.args.alg in ["aco", "random"]) and not self.args.use_heuristic:
                     tk.messagebox.showinfo(title="SIM", message="Good Bye~")
                 self.win.quit()
         else:

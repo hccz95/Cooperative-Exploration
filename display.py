@@ -52,7 +52,9 @@ class Maze(tk.Tk, object):
 
     def get_name(self):
         # 用对话框收集用户姓名
-        if self.args.alg == "hsi":
+        if self.args.use_heuristic:
+            name = f"heursitc_seed_{self.args.seed:02d}"
+        elif self.args.alg == "hsi":
             name = askstring(title="UserName", prompt="Please input your name!", initialvalue=None, parent=self)
             if name is None or name == "":
                 name = "Anonymous"
@@ -91,10 +93,6 @@ class Maze(tk.Tk, object):
                     self.draw.rectangle((x, y, x + self.UNIT, y + self.UNIT), fill=color, width=1, outline='#7f7f7f')
         # 给地图画一个边框
         self.draw.rectangle((2, 2, self.region_width * self.UNIT - 1, self.region_height * self.UNIT - 1), outline='black')
-
-        for r, c in self.maps.frontiers:
-            x, y = c * self.UNIT, r * self.UNIT
-            self.draw.rectangle((x, y, x + self.UNIT, y + self.UNIT), fill='#00ff00', width=1, outline='#7f7f7f')
 
         # draw predators
         for predator in predators:
