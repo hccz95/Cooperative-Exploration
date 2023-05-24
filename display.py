@@ -53,7 +53,7 @@ class Maze(tk.Tk, object):
     def get_name(self):
         # 用对话框收集用户姓名
         if self.args.use_heuristic:
-            name = f"heursitc_seed_{self.args.seed:02d}"
+            name = f"heuristic_seed_{self.args.seed:02d}"
         elif self.args.alg == "hsi":
             name = askstring(title="UserName", prompt="Please input your name!", initialvalue=None, parent=self)
             if name is None or name == "":
