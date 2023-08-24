@@ -137,6 +137,8 @@ class Predator(MoveComponent):
         self.visit()
 
     def detect(self):
+        self.stuck_new = False
+
         if self.stuck:
             return True
         if len(self.planned_path) > 0:
@@ -151,9 +153,7 @@ class Predator(MoveComponent):
                 self.stuck = True
                 self.history["pos"].clear()
 
-                import winsound, threading
-                thread = threading.Thread(target=winsound.Beep, args=(1000, 400))   # 发出警报声
-                thread.start()
+                self.stuck_new = True
 
                 return True
         return False

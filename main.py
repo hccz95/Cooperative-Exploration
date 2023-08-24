@@ -2,7 +2,8 @@ import argparse
 import random
 import os
 import numpy as np
-from runner import SimEnv
+from runner import Runner
+from sim_env import SimEnv
 
 
 if __name__ == "__main__":
@@ -20,5 +21,7 @@ if __name__ == "__main__":
     np.random.seed(args.seed)
 
     scenes = [map_name for map_name in os.listdir('scenes/')]
-    runner = SimEnv(scenes=scenes, args=args)
+
+    env = SimEnv(scenes=scenes, args=args)
+    runner = Runner(env=env, args=args)
     runner.run()
