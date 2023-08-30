@@ -80,7 +80,6 @@ class Runner(object):
             return False
 
         self.win.load_maps(self.env.maps)
-        self.env.maps.UNIT = self.win.UNIT
 
         if len(self.env.scenes) == 0:
             self.b_next.config(state="disabled")
@@ -101,7 +100,6 @@ class Runner(object):
         if not os.path.exists(self.screenshot_dir):
             os.makedirs(self.screenshot_dir)
 
-        self.update_canvas()
         return True
 
     def run(self):
@@ -223,7 +221,7 @@ class Runner(object):
         if self.args.mode == 'multiple':
             return
 
-        self.env.left_click(event)
+        self.env.left_click(event.x, event.y)
 
     def right_click(self, event):
         if not self.receive_cmd:
@@ -231,7 +229,7 @@ class Runner(object):
         if self.args.mode == 'single':
             return
 
-        self.env.right_click(event)
+        self.env.right_click(event.x, event.y)
 
     def update_canvas(self):
         if self.args.gui:

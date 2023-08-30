@@ -75,6 +75,7 @@ class Maze(tk.Tk, object):
 
         self.region_height, self.region_width = maps.region_height, maps.region_width
         self.UNIT = min((H_max - gap * 2) / self.region_height, (H_max - gap * 2) / self.region_width)
+        self.maps.UNIT = self.UNIT
 
     def draw_reset(self, predators=[], key_region=[]):
         for r in range(self.region_height):

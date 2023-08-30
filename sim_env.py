@@ -42,6 +42,9 @@ class SimEnv(object):
 
         if base_r == 'random':
             base_r, base_c = self.maps.random_free_position()
+
+        self.maps.base_r = base_r
+        self.maps.base_c = base_c
         self.predators = [Predator(position=(base_r, base_c), num=idx, region_size=self.region_size, sight=2, maps=self.maps)
                           for idx in range(num_predator)]
         self.maps.prune_frontier()
@@ -108,12 +111,10 @@ class SimEnv(object):
 
         # self.maps.evaporate()
 
-    def left_click(self, event):
+    def left_click(self, x, y):
 
         print("Left Click")
         logging.info("Left Click mark")
-
-        x, y = event.x, event.y
 
         min_pred = None
         min_dis = 1e8
@@ -146,7 +147,8 @@ class SimEnv(object):
 
                     self.chosen_predator = None
                 else:                       # Temp_Goal不可达
-                    self.label_tips.config(bg='red', text="You chose an INVALID Goal!")
+                    # TODO: label_tips与gui相关，不应该放在这里
+                    # self.label_tips.config(bg='red', text="You chose an INVALID Goal!")
                     logging.info(f"Left Click: Select a invalid goal!")
         else:
             if min_pred:        # 选定了一个新的stuck_agent
@@ -175,9 +177,8 @@ class SimEnv(object):
                         predator.goal = (r, c)
                         predator.planned_path = path
 
-    def right_click(self, event):
+    def right_click(self, x, y):
 
-        x, y = event.x, event.y
         r, c = self.maps.xy2rc((x, y))
 
         if not self.maps.cell_visible[r][c] or self.maps.obstacle(r, c):
@@ -209,7 +210,6 @@ class SimEnv(object):
 
         logging.info(f"Right Click: Select a key point ({r}, {c}), Affected agents' ids are {predator_num}")
 
-
     def _find_the_nearest_goal(self, r, c, goals):
         from collections import deque
         q = deque()
@@ -231,8 +231,6 @@ class SimEnv(object):
         return self.step_cnt >= self.max_steps
 
     def completed(self):
-        if len(self.stat) == 0:
-            return False
         return self.maps.get_coverage() >= self.goal_coverage
 
     def generate_left_event(self):
