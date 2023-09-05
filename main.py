@@ -2,7 +2,7 @@ import argparse
 import random
 import os
 import numpy as np
-from runner import Runner
+from qt_runner import Runner
 from sim_env import SimEnv
 
 
