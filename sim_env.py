@@ -23,17 +23,21 @@ class SimEnv(object):
 
         super(SimEnv, self).__init__()
 
-    def load_scene(self, ):
-        if len(self.scenes) == 0:
-            return False
+    def load_scene(self, scene=None):
+        # 如果指定了文件，则加载；否则从self.scenes队列中加载
+        if scene is None:
+            if len(self.scenes) == 0:
+                return False
+            else:
+                scene = self.scenes[0]
 
-        print(f"Scene \"{self.scenes[0]}\" start....")
-        logging.info(f"Scene \"{self.scenes[0]}\" start....")
+        print(f"Scene \"{scene}\" start....")
+        logging.info(f"Scene \"{scene}\" start....")
 
-        grids, base_r, base_c, num_predator, max_steps = load_scene(self.scenes[0])
+        grids, base_r, base_c, num_predator, max_steps = load_scene(scene)
         self.max_steps = max_steps
         self.maps = Map(grids)
-        self.scene = self.scenes[0]
+        self.scene = scene
         self.scenes.popleft()
 
         self.region_size = self.maps.region_size
@@ -45,9 +49,9 @@ class SimEnv(object):
 
         self.maps.base_r = base_r
         self.maps.base_c = base_c
-        self.predators = [Predator(position=(base_r, base_c), num=idx, region_size=self.region_size, sight=2, maps=self.maps)
+        base_o = self.maps.random_orientation()
+        self.predators = [Predator(position=(base_r, base_c), orientation=base_o,num=idx, region_size=self.region_size, sight=10, maps=self.maps)
                           for idx in range(num_predator)]
-        self.maps.prune_frontier()
 
         self.step_cnt = 0
         self.planner = AStar(self.maps, "manhattan")

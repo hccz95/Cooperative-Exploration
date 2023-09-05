@@ -3,7 +3,7 @@ import numpy as np
 from Components.Components import MoveComponent
 from collections import deque
 
-T = 25
+T = 100
 
 chemical_inc = 0.30
 chemical_eva = 0.9995
@@ -29,13 +29,14 @@ class Predator(MoveComponent):
     aco_alpha = 2
     stuck_ratio = 25
 
-    def __init__(self, position, num, region_size, sight=1, maps=None):
+    def __init__(self, position, orientation, num, region_size, sight=1, maps=None):
         super(Predator, self).__init__(position, num, region_size, maps)
         self.__region_size = region_size
         self.__sight = sight
         self.maps = maps
+        self.orientation = orientation #新加头部朝向
 
-        self.history = {"pos": deque(maxlen=T), "chemical": deque(maxlen=T)}
+        self.history = {"pos": deque(maxlen=T), "chemical": deque(maxlen=T), "act": deque(maxlen=T)}
 
         self.stuck = False
         self.chosen = False
@@ -44,20 +45,19 @@ class Predator(MoveComponent):
 
         self.visit()
 
-    def visit(self):
+    def visit(self, act='START'):
         r, c = self.position
+        o = self.orientation
         self.maps.cell_visited[r][c] = 1
         self.maps.cell_chemical[r][c] += chemical_inc
 
-        self.history["pos"].append((r, c))
+        self.history["pos"].append((r, c, o))
         self.history["chemical"].append(self.maps.cell_chemical[r][c])
-
+        self.history["act"].append(act)
         for r_, c_ in self.visible_positions():
             if self.maps.in_range(r_, c_) and not self.maps.cell_visible[r_][c_]:
                 self.maps.cell_visible[r_][c_] = True
                 self.maps.explored_cnt += ~self.maps.cell_obstacle[r_][c_]
-                if self.maps.passable(r_, c_):
-                    self.maps.add_frontier((r_, c_))
 
         if Predator.args.alg == 'hsi':
             self.detect()
@@ -85,75 +85,75 @@ class Predator(MoveComponent):
 
         return positions
 
-    def close(self):
-        mask_1 = 0
-        r, c = self.position
-        for idx, (dr, dc) in enumerate(pos_dt[1]):
-            r_, c_ = r + dr, c + dc
-            if self.maps.is_closed(r_, c_):
-                mask_1 |= 1 << idx
+    def move_toward(self, orientation):
+        ori2id = {'N': 0, 'E': 1, 'S': 2, 'W': 3}
+        ori_delta = ori2id[orientation] - ori2id[self.orientation]
 
-        mask_1 = mask_1 << len(pos_dt[1]) | mask_1
-        for idx in range(0, len(pos_dt[1]), 2):
-            if (mask_1 >> idx) & 31 == 31:      # 被5个匚形格子包围
-                self.maps.cell_closed[r][c] = self.maps.step_cnt
-                break
-            if (mask_1 >> idx) & 15 == 15 and (mask_1 >> idx >> 5) & 1 == 0:    #
-                self.maps.cell_closed[r][c] = self.maps.step_cnt
-                break
-        for idx in range(1, len(pos_dt[1]), 2):
-            if (mask_1 >> idx) & 15 == 15 and (mask_1 >> idx >> 6) & 1 == 0:
-                self.maps.cell_closed[r][c] = self.maps.step_cnt
-                break
+        if self.orientation == orientation:
+            self.move("MF")
+        elif ori_delta in [-2, 2]:
+            self.move('TR')
+            self.move('TR')
+        elif ori_delta in [-1, 3]:
+            self.move("TL")
+        elif ori_delta in [1, -3]:
+            self.move("TR")
 
-    def move(self):
-        if self.stuck:
-            return None
+    def move(self, act):
 
-        if len(self.planned_path) > 0:
-            nxt_nb = self.planned_path.popleft()
+        if act == 'TL':
+            self.turn_left()
+        elif act == 'TR':
+            self.turn_right()
+        elif act == 'MF':
+            act_cmd = self.go_forward()
             cmd_list, neighbor_list = self.moveable_directions()
             for cmd, nb in zip(cmd_list, neighbor_list):
-                if nb == nxt_nb:
-                    break
-        elif Predator.args.alg == "random":                   # random move
-            cmd_list, neighbor_list = self.moveable_directions()
-            probs = np.ones_like(cmd_list, dtype=float) / len(cmd_list)
-            cmd = np.random.choice(cmd_list, p=probs)       # probabilistic
-            # cmd = cmd_list[np.argmax(probs)]                # deterministic
-        else:   # Predator.args.alg in ["aco", "hsi"]:     # aco move
-            probs = []
+                if cmd == act_cmd:
+                    super(Predator, self).move(cmd)
+        elif act == 'MB':
+            act_cmd = self.go_backward()
             cmd_list, neighbor_list = self.moveable_directions()
             for cmd, nb in zip(cmd_list, neighbor_list):
-                r, c = nb
-                pheromone = max(1e-8, self.maps.cell_chemical[r][c])
-                p = (self.aco_c + pheromone) ** -self.aco_alpha
-                probs.append(p)
-            probs = np.array(probs) / sum(probs)
-            cmd = np.random.choice(cmd_list, p=probs)       # probabilistic
-            # cmd = cmd_list[np.argmax(probs)]                # deterministic
-
-        super(Predator, self).move(cmd)
-        self.visit()
+                if cmd == act_cmd:
+                    super(Predator, self).move(cmd)
+        self.visit(act)
 
     def detect(self):
-        self.stuck_new = False
-
-        if self.stuck:
-            return True
-        if len(self.planned_path) > 0:
-            return False
-        if len(self.history["pos"]) == self.history["pos"].maxlen:
-            bin = set()
-            for x in self.history["pos"]:
-                bin.add(x)
-            if len(bin) < len(self.history["pos"]) * Predator.stuck_ratio / 100:
-                print('Depression Agent#', self.num)
-                logging.info(f"Event: Agent# {self.num} get stuck, Beep")
-                self.stuck = True
-                self.history["pos"].clear()
-
-                self.stuck_new = True
-
-                return True
         return False
+
+    def turn_left(self):
+        turn_left_dict = {
+            'N':'W',
+            'W':'S',
+            'S':'E',
+            'E':'N'
+        }
+        self.orientation = turn_left_dict.get(self.orientation, 'Invalid orientation')
+
+    def turn_right(self):
+        turn_right_dict = {
+            'N':'E',
+            'E':'S',
+            'S':'W',
+            'W':'N'
+        }
+        self.orientation = turn_right_dict.get(self.orientation, 'Invalid orientation')
+
+    def go_forward(self):
+        go_forward_dict = {
+            'N':'U',
+            'W':'L',
+            'S':'D',
+            'E':'R'
+        }
+        return go_forward_dict.get(self.orientation, 'Invalid orientation')
+
+    def go_backward(self):
+        go_backward_dict = {
+            'N':'D',
+            'W':'R',
+            'S':'U',
+            'E':'L'
+        }
+        return go_backward_dict.get(self.orientation, 'Invalid orientation')

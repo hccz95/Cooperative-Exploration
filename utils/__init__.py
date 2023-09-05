@@ -1,7 +1,7 @@
 import numpy as np
 
 def load_scene(scene_file):
-    with open('scenes/' + scene_file, 'r') as f:
+    with open(scene_file, 'r') as f:
         _, height = f.readline().split()
         height = int(height)
         _, width = f.readline().split()

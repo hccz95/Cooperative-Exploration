@@ -1,5 +1,5 @@
 import numpy as np
-
+import random
 
 class Map(object):
     def __init__(self, grids):
@@ -9,7 +9,7 @@ class Map(object):
 
         self.free_grids = []
         self.process_grids(grids)
-
+        self.optional_orientation = ['N','E','S','W']   #'NE','NW','SE','SW'
         self.cell_visited = np.zeros_like(grids, dtype=bool)
         self.cell_visible = np.zeros_like(grids, dtype=bool)
         self.cell_chemical = np.zeros_like(grids, dtype=float)
@@ -66,11 +66,12 @@ class Map(object):
         idx = np.random.randint(0, len(self.free_grids))
         return self.free_grids[idx]
 
-    def is_closed(self, r, c):
-        return not self.in_range(r, c) or self.obstacle(r, c) or (self.cell_closed[r][c] > 0)
+    def random_orientation(self):
+        # 新增随机方向生成
+        return random.choice(self.optional_orientation)
 
     def passable(self, r, c):
-        if self.in_range(r, c) and not self.obstacle(r, c) and 0 == self.cell_closed[r][c]:
+        if self.in_range(r, c) and not self.obstacle(r, c):
             return True
         return False
 
@@ -89,11 +90,6 @@ class Map(object):
 
     def in_range(self, r, c):
         return 0 <= r < self.region_height and 0 <= c < self.region_width
-
-    def evaporate(self):
-        for r in range(self.region_height):
-            for c in range(self.region_width):
-                self.cell_chemical[r][c] *= chemical_eva
 
     def passable_neighbors(self, r, c):
         neighbors = []
@@ -126,23 +122,6 @@ class Map(object):
 
     def get_coverage(self):
         return self.explored_cnt / len(self.free_grids)
-
-    def add_frontier(self, position):
-        self.frontiers.append(position)
-
-    def prune_frontier(self):
-        for k in range(len(self.frontiers)-1, -1, -1):
-            position = self.frontiers[k]
-            if not self.is_frontier(position):
-                self.frontiers.pop(k)
-
-    def is_frontier(self, position):
-        r, c = position
-        for dr, dc in [(-1, 0), (0, +1), (+1, 0), (0, -1)]:
-            # 如果四周有未知邻居，则为frontier
-            if self.in_range(r+dr, c+dc) and not self.cell_visible[r+dr][c+dc]:
-                return True
-        return False
 
 
 if __name__ == "__main__":

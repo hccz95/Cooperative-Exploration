@@ -1,6 +1,6 @@
 import sys
 import time
-from PyQt5.QtWidgets import QApplication, QMessageBox
+from PyQt5.QtWidgets import QApplication, QMessageBox, QFileDialog
 from PyQt5.QtCore import Qt, QTimer
 from qt_display import MapVisualization
 
@@ -19,13 +19,22 @@ class Runner(object):
         self.win.next.mousePressEvent = self.press_next
         self.win.map.mousePressEvent = self.intervention
 
+        # 方向键
+        self.win.btn_left.mousePressEvent = self.cmd_left
+        self.win.btn_right.mousePressEvent = self.cmd_right
+        self.win.btn_up.mousePressEvent = self.cmd_up
+        self.win.btn_down.mousePressEvent = self.cmd_down
+
+        self.win.btn_save.mousePressEvent = self.cmd_save
+        self.win.btn_clear.mousePressEvent = self.cmd_clear
+
         self.receive_cmd = False        # 用这个变量来控制human只能在算法运行时进行操作
 
         self.timer = self.win.timer
         self.timer.timeout.connect(self.step)
 
-    def load_scene(self, ):
-        if not self.env.load_scene():
+    def load_scene(self, scene=None):
+        if not self.env.load_scene(scene):
             # self.label_tips.config(text="Mission Completed, Thank You!", bg='green')
             # self.label_tips.update()
 
@@ -59,8 +68,22 @@ class Runner(object):
         self.win.set_start(False)
         self.win.get_name()
 
-        self.receive_cmd = True
-        self.timer.start(0)
+        # 打开文件对话框
+        options = QFileDialog.Options()
+        scene_file, ok = QFileDialog.getOpenFileName(self.win, '选择文件', '', 'All Files (*)', options=options)
+
+        if scene_file:
+            self.load_scene(scene_file)
+        else:
+            scene_file = self.env.scene
+
+        import os
+        time_stamp = time.time()
+        self.save_dir = f"logs/{self.args.name}/{os.path.basename(scene_file)[:-4]}_{int(time_stamp)}"
+        if not os.path.exists(self.save_dir):
+            os.makedirs(self.save_dir)
+
+        self.update_render()
 
     def press_next(self, event=None):
         self.win.set_next(False)
@@ -121,6 +144,62 @@ class Runner(object):
             self.win.update_map(self.env.predators, self.env.key_region)
             # self.draw_curve()
             # screenshot
+
+            # 显示动作序列
+            self.win.actions_text.setPlainText(" ".join(self.env.predators[0].history['act']))
+
+            self.win.update()
+
+    def cmd_up(self, event=None):
+        print("UPUPUP", self.env.predators[0].orientation)
+
+        for predator in self.env.predators:
+            predator.move_toward('N')
+        self.update_render()
+
+    def cmd_down(self, event=None):
+        for predator in self.env.predators:
+            predator.move_toward('S')
+        self.update_render()
+
+    def cmd_left(self, event=None):
+        for predator in self.env.predators:
+            predator.move_toward('W')
+        self.update_render()
+
+    def cmd_right(self, event=None):
+        for predator in self.env.predators:
+            predator.move_toward('E')
+        self.update_render()
+
+    def cmd_save(self, event=None):
+        import json
+        data = dict()
+        #data['map'] = self.maps.grids.tolist()
+
+        data['inst'] = self.win.instruction_text.toPlainText()
+        for num, predator in enumerate(self.env.predators):
+            data[str(num)] = {"pos": list(predator.history["pos"]), "act": list(predator.history["act"])}
+        with open(f"{self.save_dir}" + "/sample.json", 'w', encoding="utf8") as f_in:
+            json.dump(data, f_in, indent=4, ensure_ascii=False)
+
+        self.screenshot(img_name=self.save_dir + "/screenshot.png")
+
+    def cmd_clear(self, event=None):
+        # TODO: clear的逻辑尚未实现
+        pass
+
+    def screenshot(self, key=None, img_name="screenshot.png"):
+        # TODO: 用pyqt的方法截图
+        # from PIL import ImageGrab
+        # x = self.win.winfo_toplevel().winfo_rootx() * 1.25  # + canvas.winfo_x()
+        # y = self.win.winfo_toplevel().winfo_rooty() * 1.25  # + canvas.winfo_y()
+        # x1 = x + self.win.winfo_toplevel().winfo_width() * 1.25
+        # y1 = y + self.win.winfo_toplevel().winfo_height() * 1.25
+        # image = ImageGrab.grab((x, y, x1, y1))
+        # # 保存屏幕截图
+        # image.save(img_name)
+        pass
 
 
 if __name__ == "__main__":
