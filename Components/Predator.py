@@ -54,13 +54,11 @@ class Predator(MoveComponent):
         self.history["pos"].append((r, c, o))
         self.history["chemical"].append(self.maps.cell_chemical[r][c])
         self.history["act"].append(act)
-        for r_, c_ in self.visible_positions():
-            if self.maps.in_range(r_, c_) and not self.maps.cell_visible[r_][c_]:
-                self.maps.cell_visible[r_][c_] = True
-                self.maps.explored_cnt += ~self.maps.cell_obstacle[r_][c_]
+        # for r_, c_ in self.visible_positions():
+        #     if self.maps.in_range(r_, c_) and not self.maps.cell_visible[r_][c_]:
+        #         self.maps.cell_visible[r_][c_] = True
+        #         self.maps.explored_cnt += ~self.maps.cell_obstacle[r_][c_]
 
-        if Predator.args.alg == 'hsi':
-            self.detect()
 
     def visible_positions(self):
         """Flood fill"""
@@ -111,16 +109,18 @@ class Predator(MoveComponent):
             for cmd, nb in zip(cmd_list, neighbor_list):
                 if cmd == act_cmd:
                     super(Predator, self).move(cmd)
-        elif act == 'MB':
-            act_cmd = self.go_backward()
-            cmd_list, neighbor_list = self.moveable_directions()
-            for cmd, nb in zip(cmd_list, neighbor_list):
-                if cmd == act_cmd:
-                    super(Predator, self).move(cmd)
+                    break
+            else:
+                return
+        # elif act == 'MB':
+        #     act_cmd = self.go_backward()
+        #     cmd_list, neighbor_list = self.moveable_directions()
+        #     for cmd, nb in zip(cmd_list, neighbor_list):
+        #         if cmd == act_cmd:
+        #             super(Predator, self).move(cmd)
         self.visit(act)
 
-    def detect(self):
-        return False
+
 
     def turn_left(self):
         turn_left_dict = {

@@ -59,7 +59,7 @@
      <rect>
       <x>910</x>
       <y>160</y>
-      <width>181</width>
+      <width>241</width>
       <height>21</height>
      </rect>
     </property>
@@ -72,7 +72,7 @@
      <rect>
       <x>910</x>
       <y>280</y>
-      <width>111</width>
+      <width>151</width>
       <height>21</height>
      </rect>
     </property>
@@ -83,37 +83,37 @@
    <widget class="QTextEdit" name="instruction_text">
     <property name="geometry">
      <rect>
-      <x>950</x>
-      <y>200</y>
-      <width>191</width>
-      <height>64</height>
+      <x>925</x>
+      <y>183</y>
+      <width>250</width>
+      <height>90</height>
      </rect>
     </property>
    </widget>
    <widget class="QTextBrowser" name="actions_text">
     <property name="geometry">
      <rect>
-      <x>950</x>
-      <y>310</y>
-      <width>191</width>
-      <height>61</height>
+      <x>925</x>
+      <y>304</y>
+      <width>250</width>
+      <height>90</height>
      </rect>
     </property>
    </widget>
    <widget class="QWidget" name="layoutWidget">
     <property name="geometry">
      <rect>
-      <x>930</x>
+      <x>910</x>
       <y>10</y>
-      <width>241</width>
-      <height>25</height>
+      <width>281</width>
+      <height>30</height>
      </rect>
     </property>
     <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
-      <widget class="QPushButton" name="start">
+      <widget class="QPushButton" name="btn_start">
        <property name="enabled">
-        <bool>false</bool>
+        <bool>true</bool>
        </property>
        <property name="text">
         <string>START</string>
@@ -122,6 +122,9 @@
      </item>
      <item>
       <widget class="QPushButton" name="btn_clear">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
        <property name="text">
         <string>CLEAR</string>
        </property>
@@ -129,13 +132,16 @@
      </item>
      <item>
       <widget class="QPushButton" name="btn_save">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
        <property name="text">
         <string>SAVE</string>
        </property>
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="next">
+      <widget class="QPushButton" name="btn_next">
        <property name="enabled">
         <bool>false</bool>
        </property>
@@ -149,10 +155,10 @@
    <widget class="QWidget" name="layoutWidget">
     <property name="geometry">
      <rect>
-      <x>930</x>
-      <y>60</y>
-      <width>239</width>
-      <height>83</height>
+      <x>910</x>
+      <y>50</y>
+      <width>281</width>
+      <height>100</height>
      </rect>
     </property>
     <layout class="QGridLayout" name="gridLayout">

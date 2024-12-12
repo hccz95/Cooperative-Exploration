@@ -10,7 +10,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--seed', type=int, help='random seed', default=1)
-    parser.add_argument('--gui', action='store_true', help='open gui', default=False)
+    parser.add_argument('--gui', action='store_true', help='open gui', default=True)
     parser.add_argument('--alg', choices=["hsi", "aco", "random"], default="hsi")
     parser.add_argument('--mode', choices=["all", "single", "multiple"], default="all")
     parser.add_argument('--nosync', action='store_true', help='not sync the step time', default=False)
@@ -20,9 +20,9 @@ if __name__ == "__main__":
     random.seed(args.seed)
     np.random.seed(args.seed)
 
-    scene_dir = './scenes'
-    scenes = [scene_dir + '/' + map_name for map_name in os.listdir(scene_dir)]
+    # scene_dir = './scenes'
+    # scenes = [scene_dir + '/' + map_name for map_name in os.listdir(scene_dir)]
 
-    env = SimEnv(scenes=scenes, args=args)
+    env = SimEnv(args=args)
     runner = Runner(env=env, args=args)
     runner.run()

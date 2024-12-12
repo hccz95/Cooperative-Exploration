@@ -3,8 +3,9 @@ import time
 from PyQt5.QtWidgets import QApplication, QMessageBox, QFileDialog
 from PyQt5.QtCore import Qt, QTimer
 from qt_display import MapVisualization
-
-
+from PyQt5 import QtGui
+import os
+import shutil
 class Runner(object):
     def __init__(self, env, args=None):
 
@@ -15,8 +16,8 @@ class Runner(object):
         self.win = MapVisualization(args)
 
         # 绑定鼠标事件
-        self.win.start.mousePressEvent = self.press_start
-        self.win.next.mousePressEvent = self.press_next
+        self.win.btn_start.mousePressEvent = self.press_start
+        self.win.btn_next.mousePressEvent = self.press_next
         self.win.map.mousePressEvent = self.intervention
 
         # 方向键
@@ -33,8 +34,8 @@ class Runner(object):
         self.timer = self.win.timer
         self.timer.timeout.connect(self.step)
 
-    def load_scene(self, scene=None):
-        if not self.env.load_scene(scene):
+    def load_scene(self, scene_file=None):
+        if not self.env.load_scene(scene_file):
             # self.label_tips.config(text="Mission Completed, Thank You!", bg='green')
             # self.label_tips.update()
 
@@ -42,8 +43,13 @@ class Runner(object):
             # self.win.no_scene_call()
 
             return False
-
-        self.win.load_scene(self.env.maps, self.env.predators)
+        
+        
+        time_stamp = time.time()
+        self.save_dir = f"logs/{self.args.name}/{os.path.basename(scene_file)[:-4]}_{int(time_stamp)}"
+        if not os.path.exists(self.save_dir):
+            os.makedirs(self.save_dir)
+        self.win.draw_win(self.env.maps, self.env.predators)
 
         # self.screenshot_dir = f"logs/{self.args.name}/screenshots_{self.env.scene[:-4]}"
         # if not os.path.exists(self.screenshot_dir):
@@ -53,13 +59,7 @@ class Runner(object):
 
     def run(self):
 
-        if self.load_scene():
-            self.win.set_start(True)
-            if self.args.alg in ["aco", "random"] or self.args.use_heuristic:
-                QTimer.singleShot(1000, self.press_start)
-        else:
-            # if human: print("empty scene!")
-            exit(0)
+        self.win.set_start(True)
 
         self.win.show()
         sys.exit(self.app.exec_())
@@ -75,20 +75,27 @@ class Runner(object):
         if scene_file:
             self.load_scene(scene_file)
         else:
-            scene_file = self.env.scene
+            exit(0)
+        self.scene_file = scene_file
 
-        import os
-        time_stamp = time.time()
-        self.save_dir = f"logs/{self.args.name}/{os.path.basename(scene_file)[:-4]}_{int(time_stamp)}"
-        if not os.path.exists(self.save_dir):
-            os.makedirs(self.save_dir)
-
-        self.update_render()
+        # self.update_render()
+        self.win.set_clear(True)
+        self.win.set_save(True)
+        self.win.set_next(True)
 
     def press_next(self, event=None):
-        self.win.set_next(False)
         self.receive_cmd = True
-        self.timer.start(0)
+        if len(os.listdir(self.save_dir)) == 0:
+            shutil.rmtree(self.save_dir)
+        options = QFileDialog.Options()
+        scene_file, ok = QFileDialog.getOpenFileName(self.win, '选择文件', '', 'All Files (*)', options=options)
+        if not ok:
+            return
+        if scene_file:
+            self.load_scene(scene_file)
+        else:
+            return
+        self.scene_file = scene_file
 
     def step(self):
 
@@ -111,7 +118,7 @@ class Runner(object):
                     QTimer.singleShot(50, self.press_next)
             else:
                 if not (self.args.alg in ["aco", "random"]) and not self.args.use_heuristic:
-                    QMessageBox.information(self.win, "SIM", "Mission Completed!\n\nGood Bye~", QMessageBox.Yes, QMessageBox.Yes)
+                    QMessageBox.information(self.win, "SIM", "Mission Completed!\n\nGood Bye~", QMessageBox.Yes)
                 self.app.quit()
         else:
             if self.args.nosync:
@@ -151,7 +158,7 @@ class Runner(object):
             self.win.update()
 
     def cmd_up(self, event=None):
-        print("UPUPUP", self.env.predators[0].orientation)
+        #print("UPUPUP", self.env.predators[0].orientation)
 
         for predator in self.env.predators:
             predator.move_toward('N')
@@ -183,13 +190,18 @@ class Runner(object):
         with open(f"{self.save_dir}" + "/sample.json", 'w', encoding="utf8") as f_in:
             json.dump(data, f_in, indent=4, ensure_ascii=False)
 
-        self.screenshot(img_name=self.save_dir + "/screenshot.png")
-
+        self.screenshot(img_dir=f"{self.save_dir}" + "/screenshot.png")
+        self.win.set_next(True)
+        QMessageBox.information(self.win, "TIP", "Save Completed!", QMessageBox.Yes)
+    
     def cmd_clear(self, event=None):
-        # TODO: clear的逻辑尚未实现
-        pass
-
-    def screenshot(self, key=None, img_name="screenshot.png"):
+        
+        print(len(os.listdir(self.save_dir)))
+        shutil.rmtree(self.save_dir)
+        self.load_scene(self.scene_file)
+        QMessageBox.information(self.win, "TIP", "Clear map, reloaded completed!", QMessageBox.Yes)
+    
+    def screenshot(self, key=None, img_dir="screenshot.png"):
         # TODO: 用pyqt的方法截图
         # from PIL import ImageGrab
         # x = self.win.winfo_toplevel().winfo_rootx() * 1.25  # + canvas.winfo_x()
@@ -199,7 +211,18 @@ class Runner(object):
         # image = ImageGrab.grab((x, y, x1, y1))
         # # 保存屏幕截图
         # image.save(img_name)
-        pass
+        # 创建一个 QPixmap，与 QGraphicsView 的大小相匹配
+        pixmap = QtGui.QPixmap(self.win.size())
+        pixmap.fill(Qt.white) # 设置背景颜色
+
+        # 创建一个 QPainter 来绘制内容到 QPixmap
+        painter = QtGui.QPainter(pixmap)
+        self.win.render(painter)
+        painter.end()
+
+        # # 保存 QPixmap 到图像文件
+        pixmap.save(img_dir)
+
 
 
 if __name__ == "__main__":

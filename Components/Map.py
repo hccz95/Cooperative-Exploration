@@ -7,21 +7,28 @@ class Map(object):
         self.region_size = grids.shape
         self.region_height, self.region_width = grids.shape
 
-        self.free_grids = []
-        self.process_grids(grids)
+        self.free_grids = []        
         self.optional_orientation = ['N','E','S','W']   #'NE','NW','SE','SW'
         self.cell_visited = np.zeros_like(grids, dtype=bool)
         self.cell_visible = np.zeros_like(grids, dtype=bool)
         self.cell_chemical = np.zeros_like(grids, dtype=float)
-        self.cell_obstacle = np.array(grids != '.', dtype=bool)
+        self.cell_obstacle = np.array(grids == '=', dtype=bool) + np.array(grids == '$', dtype=bool) \
+                             + np.array(grids == '~', dtype=bool) + np.array(grids == '#', dtype=bool)
         self.cell_closed = np.zeros_like(grids, dtype=int)
-
+        self.process_grids(grids)
         self.step_cnt = 0
         self.explored_cnt = 0
 
         self.frontiers = []
 
     def process_grids(self, grids):
+        for r in range(self.region_height):
+            for c in range(self.region_width):
+                if not self.cell_obstacle[r][c]:
+                    self.free_grids.append((r, c))
+        print('Free Grids:', len(self.free_grids), )
+    
+    def _process_grids(self, grids):
         anc = np.zeros((self.region_height * self.region_width), dtype=int)
         siz = np.zeros((self.region_height * self.region_width), dtype=int)
         for i in range(self.region_height * self.region_width):
@@ -58,8 +65,8 @@ class Map(object):
                 fa = find_anc(self.rc2id((r, c)))
                 if fa == max_block_anc:
                     self.free_grids.append((r, c))
-                else:
-                    grids[r][c] = '#'
+                # else:
+                #     grids[r][c] = '#'
         print('Free Grids:', len(self.free_grids), )
 
     def random_free_position(self):
